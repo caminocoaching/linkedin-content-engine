@@ -17,7 +17,7 @@ import {
 } from './ai-service.js';
 
 import {
-    getScheduleDates, exportCSV, downloadPostTxt, copyToClipboard
+    getScheduleDates, exportCSV, buildCSVString, downloadPostTxt, copyToClipboard
 } from './scheduler.js';
 
 import { loadSettings, renderSettingsPage } from './settings.js';
@@ -133,6 +133,7 @@ function initWizard() {
 
     // Export button
     document.getElementById('export-csv-btn')?.addEventListener('click', handleExportCSV);
+    document.getElementById('copy-csv-btn')?.addEventListener('click', handleCopyCSV);
 }
 
 function renderPillarPreview() {
@@ -537,6 +538,18 @@ function handleExportCSV() {
     const dates = getScheduleDates(state.posts.length);
     const filename = exportCSV(state.posts, dates);
     showToast(`Exported ${state.posts.length} posts to ${filename}`, 'success');
+}
+
+function handleCopyCSV() {
+    if (state.posts.length === 0) {
+        showToast('No posts to copy.', 'error');
+        return;
+    }
+
+    const dates = getScheduleDates(state.posts.length);
+    const csvString = buildCSVString(state.posts, dates);
+    copyToClipboard(csvString);
+    showToast(`CSV data for ${state.posts.length} posts copied to clipboard! Paste into a .csv file.`, 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -111,6 +111,24 @@ export function exportCSV(posts, dates) {
     return filename;
 }
 
+// ─── Build CSV String (for clipboard copy) ────────────────────
+export function buildCSVString(posts, dates) {
+    const headers = ['scheduled_at', 'content', 'platform', 'media_url', 'status'];
+
+    const rows = posts.map((post, i) => {
+        const date = dates[i]?.date || new Date();
+        return [
+            formatGHLDate(date),
+            `"${(post.content || '').replace(/"/g, '""')}"`,
+            'facebook',
+            post.imageUrl || '',
+            'scheduled'
+        ].join(',');
+    });
+
+    return [headers.join(','), ...rows].join('\n');
+}
+
 // ─── Download Single Post as .txt ─────────────────────────────
 export function downloadPostTxt(post, index = 0) {
     const content = post.content || '';
