@@ -82,21 +82,31 @@ export function exportCSV(posts, dates) {
 
     const csv = [headers.join(','), ...rows].join('\n');
 
-    // Create and download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
     const now = new Date();
     const filename = `social-posts-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.csv`;
 
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+        // Method 1: Blob URL download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+
+        // Delay cleanup so the browser has time to start the download
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 1000);
+    } catch (e) {
+        // Method 2: Fallback — open CSV as data URI in new tab
+        console.warn('Blob download failed, using data URI fallback:', e);
+        const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+        window.open(dataUri, '_blank');
+    }
 
     return filename;
 }
@@ -114,8 +124,11 @@ export function downloadPostTxt(post, index = 0) {
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 1000);
 }
 
 // ─── Copy Post to Clipboard ──────────────────────────────────
