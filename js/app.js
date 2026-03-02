@@ -1,26 +1,30 @@
 // ═══════════════════════════════════════════════════════════════
-// 🏁 DRIVER SOCIAL MEDIA ENGINE — Main App
+// ⚡ BUSINESS LEADERS LINKEDIN ENGINE — Main App
 // Orchestrator, routing, wizard, single post, and shared utils
 // ═══════════════════════════════════════════════════════════════
 
 import {
     PILLARS, FRAMEWORKS, CTAS, AUTHORITY_LINES, CAMPAIGN_ARC,
+    WEEKLY_SCHEDULE, MOTORSPORT_BRIDGES, VISUAL_TYPES,
     getActiveCTAs, getRotatingCTA, resetCTARotation,
     getRotatingAuthority, resetAuthorityRotation,
-    isRaceWeek, getRaceWeekContext,
-    getWeeklyPillars, getWeeklyFrameworks,
-    getRandomPillar, getRandomFramework
-} from './content-engine.js';
+    getRotatingMotorsportBridge, resetMotorsportBridgeRotation,
+    getWeeklyPillars, getWeeklyFrameworks, getWeeklyCTAs,
+    getRandomPillar, getRandomFramework,
+    getSeasonalContext
+} from './content-engine.js?v=20260228';
 
 import {
-    generateTopics, generatePost, generatePosts, regeneratePost, generateImagePrompt
-} from './ai-service.js';
+    generateTopics, generatePost, generatePosts, regeneratePost,
+    generateImagePrompt, getVisualTypeForDay, getVisualGuidance
+} from './ai-service.js?v=20260228';
 
 import {
     getScheduleDates, exportCSV, buildCSVString, downloadPostTxt, copyToClipboard
-} from './scheduler.js';
+} from './scheduler.js?v=20260228';
 
-import { loadSettings, renderSettingsPage } from './settings.js';
+import { loadSettings, renderSettingsPage } from './settings.js?v=20260228';
+import { isScanDue, getNewReviews } from './review-scanner.js?v=20260228';
 
 // ─── App State ────────────────────────────────────────────────
 const state = {
@@ -32,11 +36,82 @@ const state = {
     weeklyFrameworks: [],
     weeklyCTAs: [],
     weeklyAuthorities: [],
-    raceContext: null,
+    weeklyMotorsportBridges: [],
+    seasonalContext: null,
     selectedPillar: null,
     selectedFramework: null,
     selectedCTA: 'auto'
 };
+
+const STORAGE_KEY = 'businessLinkedIn_session';
+
+// ─── Auto-Save / Restore ──────────────────────────────────────
+function saveSession() {
+    try {
+        const data = {
+            wizardStep: state.wizardStep,
+            topics: state.topics,
+            posts: state.posts,
+            weeklyPillars: state.weeklyPillars,
+            weeklyFrameworks: state.weeklyFrameworks,
+            weeklyCTAs: state.weeklyCTAs,
+            weeklyAuthorities: state.weeklyAuthorities,
+            weeklyMotorsportBridges: state.weeklyMotorsportBridges,
+            savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Failed to save session:', e);
+    }
+}
+
+function restoreSession() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+
+        const data = JSON.parse(raw);
+        if ((!data.posts || data.posts.length === 0) && (!data.topics || data.topics.length === 0)) {
+            return false;
+        }
+
+        state.topics = data.topics || [];
+        state.posts = data.posts || [];
+        state.weeklyPillars = data.weeklyPillars || [];
+        state.weeklyFrameworks = data.weeklyFrameworks || [];
+        state.weeklyCTAs = data.weeklyCTAs || [];
+        state.weeklyAuthorities = data.weeklyAuthorities || [];
+        state.weeklyMotorsportBridges = data.weeklyMotorsportBridges || [];
+
+        if (state.posts.length > 0) {
+            goToWizardStep(3);
+            renderPosts();
+            const savedDate = data.savedAt ? new Date(data.savedAt).toLocaleString() : 'previously';
+            showToast(`Restored ${state.posts.length} saved posts from ${savedDate}`, 'success');
+        } else if (state.topics.length > 0) {
+            goToWizardStep(2);
+            renderTopics();
+            showToast(`Restored ${state.topics.length} saved topics`, 'success');
+        }
+        return true;
+    } catch (e) {
+        console.warn('Failed to restore session:', e);
+        return false;
+    }
+}
+
+function clearSession() {
+    localStorage.removeItem(STORAGE_KEY);
+    state.topics = [];
+    state.posts = [];
+    state.weeklyPillars = [];
+    state.weeklyFrameworks = [];
+    state.weeklyCTAs = [];
+    state.weeklyAuthorities = [];
+    state.weeklyMotorsportBridges = [];
+    goToWizardStep(1);
+    showToast('Session cleared. Ready for a fresh week!', 'info');
+}
 
 // ─── Initialise ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,9 +119,18 @@ document.addEventListener('DOMContentLoaded', () => {
     initWizard();
     initSinglePost();
     renderSettingsPage();
-    checkRaceWeek();
+    checkSeasonalContext();
+    checkReviewScanStatus();
     initToastListener();
+    restoreSession();
 });
+
+// ─── Utility: Escape HTML ─────────────────────────────────────
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // ─── Toast System ─────────────────────────────────────────────
 function showToast(message, type = 'info') {
@@ -95,22 +179,35 @@ function setStatus(text, busy = false) {
     textEl.textContent = text;
 }
 
-// ─── Race Week Check ──────────────────────────────────────────
-function checkRaceWeek() {
-    state.raceContext = getRaceWeekContext();
+// ─── Seasonal Context Check ──────────────────────────────────
+function checkSeasonalContext() {
+    state.seasonalContext = getSeasonalContext();
     const badgesEl = document.getElementById('wizard-badges');
+    badgesEl.innerHTML = '';
 
-    if (state.raceContext) {
-        badgesEl.innerHTML = `
-      <span class="badge badge-race">🏎️ Race Week: ${state.raceContext.name} — ${state.raceContext.circuit}</span>
-    `;
+    if (state.seasonalContext) {
+        badgesEl.innerHTML += `<span class="badge badge-season">📅 ${state.seasonalContext.season}</span>`;
     }
 
-    // Show current season
     const activeCTAs = getActiveCTAs();
-    const seasonNames = activeCTAs.map(c => c.season);
-    const seasonLabel = seasonNames.includes('REVIEW') ? 'Race Season' : seasonNames.includes('SEASON') ? 'End of Season' : 'Off-Season';
-    badgesEl.innerHTML += `<span class="badge badge-season">📅 ${seasonLabel} — ${activeCTAs.length} CTAs active</span>`;
+    badgesEl.innerHTML += `<span class="badge badge-cta">🎯 ${activeCTAs.length} CTAs active — Winning Formula Assessment</span>`;
+}
+
+// ─── Review Scan Status Check ────────────────────────────────
+function checkReviewScanStatus() {
+    const newReviews = getNewReviews();
+    const scanDue = isScanDue();
+
+    if (!scanDue && newReviews.length === 0) return;
+
+    const badgesEl = document.getElementById('wizard-badges');
+    if (!badgesEl) return;
+
+    if (newReviews.length > 0) {
+        badgesEl.innerHTML += `<span class="badge" style="background:rgba(255,107,53,0.12);color:#ff6b35;cursor:pointer;" onclick="document.querySelector('[data-page=settings]').click()">⭐ ${newReviews.length} new review${newReviews.length > 1 ? 's' : ''} to process</span>`;
+    } else if (scanDue) {
+        badgesEl.innerHTML += `<span class="badge" style="background:rgba(232,185,49,0.12);color:#E8B931;cursor:pointer;" onclick="document.querySelector('[data-page=settings]').click()">⭐ Review scan due</span>`;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -118,39 +215,45 @@ function checkRaceWeek() {
 // ═══════════════════════════════════════════════════════════════
 
 function initWizard() {
-    // Render pillar preview
     renderPillarPreview();
 
-    // Find Topics button
     document.getElementById('find-topics-btn')?.addEventListener('click', handleFindTopics);
-
-    // Write Posts button
     document.getElementById('write-posts-btn')?.addEventListener('click', handleWritePosts);
-
-    // Back buttons
     document.getElementById('back-to-step1')?.addEventListener('click', () => goToWizardStep(1));
     document.getElementById('back-to-step2')?.addEventListener('click', () => goToWizardStep(2));
-
-    // Export button
     document.getElementById('export-csv-btn')?.addEventListener('click', handleExportCSV);
     document.getElementById('copy-csv-btn')?.addEventListener('click', handleCopyCSV);
+    document.getElementById('clear-session-header-btn')?.addEventListener('click', () => {
+        if (state.topics.length === 0 && state.posts.length === 0) {
+            showToast('Nothing to clear — already fresh!', 'info');
+            return;
+        }
+        if (confirm('Clear all topics and posts from this session? This cannot be undone.')) {
+            clearSession();
+        }
+    });
 }
 
 function renderPillarPreview() {
     const container = document.getElementById('pillar-preview');
-    container.innerHTML = PILLARS.map(p => `
-    <div class="pillar-card" style="border-left: 3px solid ${p.color};">
-      <div class="pillar-icon">${p.icon}</div>
-      <div class="pillar-name">${p.name}</div>
-      <div class="pillar-desc">${p.description.split('—')[0].trim()}</div>
-    </div>
-  `).join('');
+    const emotionEmojis = { fear: '😱', wonder: '🔬', aspiration: '🏆', credibility: '📊', desire: '✨', empowerment: '💪', confidence: '🌟' };
+    container.innerHTML = WEEKLY_SCHEDULE.map((day, i) => {
+        const pillar = PILLARS.find(p => p.id === day.pillarId);
+        if (!pillar) return '';
+        const emoji = emotionEmojis[day.emotion] || '📌';
+        const polarityBadge = day.polarity === 'negative' ? '⚠️' : '✨';
+        return `
+    <div class="pillar-card" style="border-left: 3px solid ${pillar.color};">
+      <div class="pillar-icon">${emoji}</div>
+      <div class="pillar-name">${day.day} ${polarityBadge}</div>
+      <div class="pillar-desc">${pillar.name}</div>
+    </div>`;
+    }).join('');
 }
 
 function goToWizardStep(step) {
     state.wizardStep = step;
 
-    // Update step indicators
     document.querySelectorAll('.wizard-step').forEach(el => {
         const s = parseInt(el.dataset.step);
         el.classList.remove('active', 'completed');
@@ -158,7 +261,6 @@ function goToWizardStep(step) {
         else if (s < step) el.classList.add('completed');
     });
 
-    // Show/hide content
     for (let i = 1; i <= 3; i++) {
         const el = document.getElementById(`wizard-step-${i}`);
         if (el) el.classList.toggle('hidden', i !== step);
@@ -176,31 +278,34 @@ async function handleFindTopics() {
     const btn = document.getElementById('find-topics-btn');
     btn.classList.add('loading');
     btn.disabled = true;
-    setStatus('Searching the web for articles...', true);
+    setStatus('Searching web for business leadership articles...', true);
 
     try {
-        // Generate weekly assignments
+        // Use the defined weekly schedule
         state.weeklyPillars = getWeeklyPillars();
         state.weeklyFrameworks = getWeeklyFrameworks();
 
         // Reset rotations
         resetCTARotation();
         resetAuthorityRotation();
+        resetMotorsportBridgeRotation();
 
-        // Assign CTAs and authority lines
-        state.weeklyCTAs = state.weeklyPillars.map(() => getRotatingCTA());
+        // Assign CTAs from the weekly schedule
+        state.weeklyCTAs = getWeeklyCTAs();
         state.weeklyAuthorities = state.weeklyPillars.map(() => getRotatingAuthority());
+        state.weeklyMotorsportBridges = state.weeklyPillars.map(() => getRotatingMotorsportBridge());
 
         // Generate topics via AI with web search
         state.topics = await generateTopics(
             state.weeklyPillars,
-            state.raceContext,
+            state.seasonalContext,
             settings.openaiApiKey,
             settings.aiModel || 'gpt-4o'
         );
 
         renderTopics();
         goToWizardStep(2);
+        saveSession();
         showToast('7 article-based topics found! Review and edit as needed.', 'success');
     } catch (err) {
         showToast(`Error: ${err.message}`, 'error');
@@ -218,6 +323,8 @@ function renderTopics() {
         const pillar = state.weeklyPillars[i];
         const framework = state.weeklyFrameworks[i];
         const campaignDay = i < CAMPAIGN_ARC.length ? CAMPAIGN_ARC[i] : null;
+        const schedule = WEEKLY_SCHEDULE[i];
+        const visualType = schedule?.visualType ? VISUAL_TYPES[schedule.visualType] : null;
 
         return `
       <div class="topic-card" data-index="${i}">
@@ -226,7 +333,8 @@ function renderTopics() {
             ${pillar.icon} ${pillar.name}
           </span>
           <span class="framework-badge">${framework.icon} ${framework.name}</span>
-          ${campaignDay ? `<span class="framework-badge">${campaignDay.day}</span>` : ''}
+          ${visualType ? `<span class="framework-badge" style="border: 1px solid ${visualType.color}30; color: ${visualType.color};">${visualType.icon} ${visualType.name}</span>` : ''}
+          ${campaignDay ? `<span class="framework-badge">📅 ${campaignDay.day}</span>` : ''}
         </div>
         <div class="topic-headline">${topic.headline || 'Topic ' + (i + 1)}</div>
         ${topic.sourceArticle ? `<div class="topic-source" style="font-size:0.72rem;color:var(--blue);margin-bottom:0.4rem;padding:0.3rem 0.5rem;background:rgba(68,136,255,0.06);border-radius:var(--r-xs);">📰 ${topic.sourceArticle}</div>` : ''}
@@ -236,12 +344,12 @@ function renderTopics() {
           </ul>
         ` : ''}
         ${topic.emotionalHook ? `<div class="topic-emotion">🎯 ${topic.emotionalHook}</div>` : ''}
+        ${topic.motorsportBridge ? `<div class="topic-motorsport" style="font-size:0.72rem;color:var(--gold);margin-top:0.3rem;padding:0.3rem 0.5rem;background:rgba(218,165,32,0.06);border-radius:var(--r-xs);">🏎️ ${topic.motorsportBridge}</div>` : ''}
         <textarea class="topic-edit-area" data-index="${i}" placeholder="Edit this topic or paste a different headline...">${topic.headline || ''}</textarea>
       </div>
     `;
     }).join('');
 
-    // Listen for edits
     container.querySelectorAll('.topic-edit-area').forEach(textarea => {
         textarea.addEventListener('input', (e) => {
             const idx = parseInt(e.target.dataset.index);
@@ -263,7 +371,7 @@ async function handleWritePosts() {
     const btn = document.getElementById('write-posts-btn');
     btn.classList.add('loading');
     btn.disabled = true;
-    setStatus('Writing 7 posts in parallel...', true);
+    setStatus('Writing 7 LinkedIn posts in parallel...', true);
 
     try {
         const campaignDays = state.topics.map((_, i) => i < CAMPAIGN_ARC.length ? CAMPAIGN_ARC[i] : null);
@@ -273,7 +381,7 @@ async function handleWritePosts() {
             frameworks: state.weeklyFrameworks,
             ctas: state.weeklyCTAs,
             authorityLines: state.weeklyAuthorities,
-            raceContext: state.raceContext,
+            motorsportBridges: state.weeklyMotorsportBridges,
             apiKey: settings.openaiApiKey,
             model: settings.aiModel || 'gpt-4o',
             campaignDays
@@ -281,7 +389,8 @@ async function handleWritePosts() {
 
         renderPosts();
         goToWizardStep(3);
-        showToast('All 7 posts generated! Review and export.', 'success');
+        saveSession();
+        showToast('All 7 LinkedIn posts generated! Review and export.', 'success');
     } catch (err) {
         showToast(`Error: ${err.message}`, 'error');
         console.error(err);
@@ -300,9 +409,13 @@ function renderPosts() {
         const date = dates[i];
         const wordCount = (post.content || '').split(/\s+/).filter(w => w).length;
         const campaignDay = post.campaignDay || (i < CAMPAIGN_ARC.length ? CAMPAIGN_ARC[i] : null);
+        const visualType = getVisualTypeForDay(i);
+        const visualGuidance = getVisualGuidance(post, i);
+
+        const isCollapsed = post.collapsed || false;
 
         return `
-      <div class="post-card ${post.imageUrl ? 'has-image' : ''}" id="post-card-${i}" data-index="${i}">
+      <div class="post-card ${post.imageUrl ? 'has-image' : ''} ${isCollapsed ? 'collapsed' : ''}" id="post-card-${i}" data-index="${i}">
         <div class="post-card-header">
           <div class="post-card-header-left">
             <span class="post-number">${i + 1}</span>
@@ -310,14 +423,19 @@ function renderPosts() {
               ${post.pillar.icon} ${post.pillar.name}
             </span>
             <span class="framework-badge">${post.framework.icon} ${post.framework.name}</span>
+            <span class="framework-badge" style="border: 1px solid ${visualType.color}30; color: ${visualType.color}; font-weight: 600;">${visualType.icon} ${visualType.name}</span>
             ${campaignDay ? `<span class="framework-badge">📅 ${campaignDay.day} — ${campaignDay.purpose}</span>` : ''}
           </div>
           <div class="post-card-header-right">
             ${post.imageUrl ? '<span class="post-status-badge complete" title="Image attached">✅ Image</span>' : '<span class="post-status-badge pending" title="No image yet">⬜ No image</span>'}
             <span class="schedule-info">${date.dayName} ${date.dateString} at ${date.timeString}</span>
+            <button class="post-collapse-toggle" onclick="window.appActions.toggleCollapse(${i})" title="${isCollapsed ? 'Expand post' : 'Collapse post'}">
+              ${isCollapsed ? '▶' : '▼'}
+            </button>
           </div>
         </div>
 
+        <div class="post-card-body ${isCollapsed ? 'collapsed-body' : ''}">
         ${post.imageUrl ? `
         <div class="post-image-preview">
           <img src="${post.imageUrl}" alt="Post ${i + 1} image" onerror="this.parentElement.innerHTML='<div class=\\'post-image-error\\'>⚠️ Image failed to load — check URL</div>'" />
@@ -326,6 +444,59 @@ function renderPosts() {
         ` : ''}
 
         <div class="post-content" id="post-content-${i}">${escapeHtml(post.content || '')}</div>
+
+        ${post.alternativeHook ? `
+        <div class="post-alt-hook" style="margin:0.5rem 1rem;padding:0.6rem 0.8rem;background:rgba(68,136,255,0.08);border-left:3px solid var(--blue);border-radius:var(--r-xs);font-size:0.78rem;">
+          <strong style="color:var(--blue);">🔄 Alternative Hook:</strong> <span style="color:var(--text-secondary);">${escapeHtml(post.alternativeHook)}</span>
+          <button class="post-action-btn" style="font-size:0.65rem;padding:0.15rem 0.4rem;margin-left:0.5rem;" onclick="window.appActions.swapHook(${i})" title="Swap this hook into the post">⇄ Swap In</button>
+        </div>
+        ` : ''}
+
+        ${post.engagementTrigger ? `
+        <div class="post-engagement-trigger" style="margin:0.3rem 1rem;padding:0.6rem 0.8rem;background:rgba(16,185,129,0.08);border-left:3px solid var(--green);border-radius:var(--r-xs);font-size:0.78rem;">
+          <strong style="color:var(--green);">💬 Engagement Trigger (Step 5):</strong> <span style="color:var(--text-secondary);">${escapeHtml(post.engagementTrigger)}</span>
+        </div>
+        ` : ''}
+
+        ${post.storyPrompt ? `
+        <div class="post-story-prompt" style="margin:0.3rem 1rem;padding:0.6rem 0.8rem;background:rgba(218,165,32,0.08);border-left:3px solid var(--gold);border-radius:var(--r-xs);font-size:0.78rem;">
+          <strong style="color:var(--gold);">✍️ Add Your Story:</strong> <span style="color:var(--text-secondary);">${escapeHtml(post.storyPrompt)}</span>
+        </div>
+        ` : ''}
+
+        ${post.dataLayerUsed ? `
+        <div class="post-data-layer" style="margin:0.3rem 1rem;padding:0.6rem 0.8rem;background:rgba(201,168,76,0.06);border-left:3px solid #C9A84C;border-radius:var(--r-xs);font-size:0.72rem;">
+          <strong style="color:#C9A84C;">📊 Data Report Layers:</strong>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.3rem;">
+            ${post.dataLayerUsed.anchor ? `<span style="padding:0.15rem 0.5rem;background:rgba(77,171,247,0.1);color:var(--blue);border-radius:999px;font-size:0.68rem;font-weight:600;">🏆 Anchor: ${post.dataLayerUsed.anchor.stat || post.dataLayerUsed.anchor} ${post.dataLayerUsed.anchor.label || ''}</span>` : '<span style="padding:0.15rem 0.5rem;background:rgba(255,255,255,0.04);color:var(--text-muted);border-radius:999px;font-size:0.68rem;">🏆 No anchor (max 3/week)</span>'}
+            ${post.dataLayerUsed.insight ? `<span style="padding:0.15rem 0.5rem;background:rgba(255,107,53,0.1);color:#ff6b35;border-radius:999px;font-size:0.68rem;font-weight:600;">🎯 Insight: ${post.dataLayerUsed.insight.title || post.dataLayerUsed.insight}</span>` : ''}
+            ${post.dataLayerUsed.bridgePattern ? `<span style="padding:0.15rem 0.5rem;background:rgba(105,219,124,0.1);color:var(--green);border-radius:999px;font-size:0.68rem;font-weight:600;">🌉 Bridge: ${post.dataLayerUsed.bridgePattern.name || post.dataLayerUsed.bridgePattern}</span>` : ''}
+          </div>
+          <div style="color:var(--text-muted);margin-top:0.3rem;font-size:0.66rem;">🛡️ WOW not HOW — results shown, methods protected</div>
+        </div>
+        ` : ''}
+
+        ${post.reviewLayerUsed ? `
+        <div class="post-review-layer" style="margin:0.3rem 1rem;padding:0.6rem 0.8rem;background:rgba(255,215,0,0.04);border-left:3px solid #E8B931;border-radius:var(--r-xs);font-size:0.72rem;">
+          <strong style="color:#E8B931;">⭐ Client Language Layer:</strong>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.3rem;">
+            ${post.reviewLayerUsed.languagePattern ? `<span style="padding:0.15rem 0.5rem;background:rgba(232,185,49,0.1);color:#E8B931;border-radius:999px;font-size:0.68rem;font-weight:600;">🗣️ Pattern: ${post.reviewLayerUsed.languagePattern.pattern}</span>` : ''}
+            ${post.reviewLayerUsed.caseStudy ? `<span style="padding:0.15rem 0.5rem;background:rgba(151,117,250,0.1);color:var(--purple);border-radius:999px;font-size:0.68rem;font-weight:600;">📖 Case Study: ${post.reviewLayerUsed.caseStudy.title}</span>` : '<span style="padding:0.15rem 0.5rem;background:rgba(255,255,255,0.04);color:var(--text-muted);border-radius:999px;font-size:0.68rem;">📖 No case study</span>'}
+            ${post.reviewLayerUsed.useSocialProof ? `<span style="padding:0.15rem 0.5rem;background:rgba(16,185,129,0.1);color:var(--green);border-radius:999px;font-size:0.68rem;font-weight:600;">⭐ Trustpilot: 4.9/5 (84 reviews)</span>` : ''}
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="post-visual-guide" style="margin:0.3rem 1rem 0.5rem;padding:0.6rem 0.8rem;background:rgba(${visualType.id === 'data-card' ? '77,171,247' : visualType.id === 'paddock-photo' ? '245,159,0' : visualType.id === 'ai-image' ? '151,117,250' : visualType.id === 'text-quote' ? '105,219,124' : '255,107,157'},0.08);border-left:3px solid ${visualType.color};border-radius:var(--r-xs);font-size:0.78rem;">
+          <strong style="color:${visualType.color};">${visualType.icon} Visual: ${visualType.name}</strong>
+          <span style="color:var(--text-muted);font-size:0.7rem;margin-left:0.4rem;">${visualType.frequency}</span>
+          <div style="color:var(--text-secondary);margin-top:0.3rem;" id="visual-prompt-${i}">${escapeHtml(typeof post.imageBrief === 'string' && post.imageBrief ? post.imageBrief : typeof post.imageBrief === 'object' && post.imageBrief ? JSON.stringify(post.imageBrief) : visualGuidance)}</div>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;">
+            <span style="color:var(--text-muted);font-size:0.68rem;">🛠️ ${visualType.tool}</span>
+            <button class="post-action-btn" onclick="window.appActions.openCanvaAI(${i})" title="Copy visual prompt & open Canva AI" style="color:#00c4cc;border-color:rgba(0,196,204,0.3);font-size:0.68rem;padding:0.2rem 0.5rem;">🎨 Canva AI</button>
+            <button class="post-action-btn" onclick="window.appActions.copyVisualPrompt(${i})" title="Copy visual prompt to clipboard" style="font-size:0.68rem;padding:0.2rem 0.5rem;">📋 Copy Prompt</button>
+          </div>
+        </div>
 
         <div class="post-card-footer">
           <div class="post-meta">
@@ -344,11 +515,11 @@ function renderPosts() {
             <button class="post-action-btn" onclick="window.appActions.openGHLMedia()" title="Upload image to GHL Media" style="color:var(--green);">📤 GHL Media</button>
           </div>
         </div>
+        </div>
       </div>
     `;
     }).join('');
 
-    // Update export info
     const firstDate = dates[0];
     const lastDate = dates[dates.length - 1];
     const imagesCount = state.posts.filter(p => p.imageUrl).length;
@@ -358,6 +529,20 @@ function renderPosts() {
 
 // ─── Post Actions (attached to window for onclick) ────────────
 window.appActions = {
+    swapHook(index) {
+        const post = state.posts[index];
+        if (!post || !post.alternativeHook) return;
+        const lines = post.content.split('\n');
+        const oldHook = lines[0];
+        lines[0] = post.alternativeHook;
+        post.content = lines.join('\n');
+        post.alternativeHook = oldHook;
+        post.edited = true;
+        renderPosts();
+        saveSession();
+        showToast('Hook swapped! Original saved as alternative.', 'success');
+    },
+
     copyPost(index) {
         const post = state.posts[index];
         if (post) {
@@ -380,7 +565,6 @@ window.appActions = {
         if (!post) return;
 
         if (contentEl.tagName === 'DIV') {
-            // Switch to edit mode
             const textarea = document.createElement('textarea');
             textarea.className = 'post-content-editing';
             textarea.value = post.content;
@@ -393,18 +577,17 @@ window.appActions = {
             textarea.focus();
             showToast('Editing mode enabled. Changes save automatically.', 'info');
         } else {
-            // Switch back to view mode
             const div = document.createElement('div');
             div.className = 'post-content';
             div.id = `post-content-${index}`;
             div.textContent = post.content;
             contentEl.replaceWith(div);
-            // Update word count
             const card = document.getElementById(`post-card-${index}`);
             const wordCountEl = card?.querySelector('.word-count');
             if (wordCountEl) {
                 wordCountEl.textContent = post.content.split(/\s+/).filter(w => w).length + ' words';
             }
+            saveSession();
         }
     },
 
@@ -421,9 +604,10 @@ window.appActions = {
         setStatus('Regenerating post...', true);
 
         try {
-            const newPost = await regeneratePost(state.posts[index], settings.openaiApiKey, settings.aiModel, state.raceContext);
+            const newPost = await regeneratePost(state.posts[index], settings.openaiApiKey, settings.aiModel);
             state.posts[index] = newPost;
             renderPosts();
+            saveSession();
             showToast('Post regenerated!', 'success');
         } catch (err) {
             contentEl.textContent = originalContent;
@@ -457,13 +641,13 @@ window.appActions = {
                 const newCta = CTAS.find(c => c.id === ctaId);
                 if (newCta && state.posts[index]) {
                     state.posts[index].cta = newCta;
-                    // Replace CTA in post content
                     const content = state.posts[index].content;
                     const ctaMarker = content.indexOf('··');
                     if (ctaMarker !== -1) {
                         state.posts[index].content = content.substring(0, ctaMarker) + newCta.ctaTemplate;
                     }
                     renderPosts();
+                    saveSession();
                     showToast(`CTA changed to ${newCta.shortName}`, 'success');
                 }
                 picker.remove();
@@ -472,7 +656,6 @@ window.appActions = {
 
         actionsDiv.appendChild(picker);
 
-        // Close on outside click
         setTimeout(() => {
             document.addEventListener('click', function closePicker(e) {
                 if (!picker.contains(e.target)) {
@@ -507,24 +690,62 @@ window.appActions = {
     },
 
     openGHLMedia() {
-        window.open('https://app.gohighlevel.com/v2/location/EwAyQ03cV2yxVYaxnY5S/media-storage', '_blank');
+        window.open('https://app.gohighlevel.com/v2/location/vdgR8teGuIgHPMPzbQkK/media-storage', '_blank');
+    },
+
+    openCanvaAI(index) {
+        const promptEl = document.getElementById(`visual-prompt-${index}`);
+        const promptText = promptEl ? promptEl.textContent : (state.posts[index]?.imageBrief || 'Create a professional image');
+        copyToClipboard(promptText);
+        showToast('Visual prompt copied! Paste it into Canva AI.', 'success');
+        window.open('https://www.canva.com/ai-image-generator/', '_blank');
+    },
+
+    copyVisualPrompt(index) {
+        const promptEl = document.getElementById(`visual-prompt-${index}`);
+        const promptText = promptEl ? promptEl.textContent : (state.posts[index]?.imageBrief || '');
+        if (promptText) {
+            copyToClipboard(promptText);
+            showToast('Visual prompt copied to clipboard!', 'success');
+        } else {
+            showToast('No visual prompt found for this post.', 'info');
+        }
     },
 
     saveImageUrl(index, btn) {
         const input = btn.previousElementSibling;
         if (input && state.posts[index]) {
             state.posts[index].imageUrl = input.value.trim();
+            // Auto-collapse after saving an image — post is complete
+            if (state.posts[index].imageUrl) {
+                state.posts[index].collapsed = true;
+            }
             renderPosts();
-            showToast(state.posts[index].imageUrl ? 'Image URL saved — preview shown on card' : 'Image URL cleared', 'success');
+            saveSession();
+            showToast(state.posts[index].imageUrl ? 'Image saved ✅ — post collapsed. Click ▶ to expand.' : 'Image URL cleared', 'success');
         }
     },
 
     removeImage(index) {
         if (state.posts[index]) {
             state.posts[index].imageUrl = '';
+            state.posts[index].collapsed = false;
             renderPosts();
+            saveSession();
             showToast('Image removed from post', 'info');
         }
+    },
+
+    toggleCollapse(index) {
+        if (state.posts[index]) {
+            state.posts[index].collapsed = !state.posts[index].collapsed;
+            renderPosts();
+            saveSession();
+        }
+    },
+
+    clearSession() {
+        clearSession();
     }
 };
 
@@ -537,7 +758,8 @@ function handleExportCSV() {
 
     const dates = getScheduleDates(state.posts.length);
     const filename = exportCSV(state.posts, dates);
-    showToast(`Exported ${state.posts.length} posts to ${filename}`, 'success');
+    localStorage.removeItem(STORAGE_KEY);
+    showToast(`Exported ${state.posts.length} posts to ${filename} — session cleared`, 'success');
 }
 
 function handleCopyCSV() {
@@ -580,7 +802,6 @@ function renderPillarSelector() {
         });
     });
 
-    // Select first by default
     const firstBtn = container.querySelector('.selector-btn');
     if (firstBtn) { firstBtn.click(); }
 }
@@ -630,19 +851,20 @@ async function handleGenerateSingle() {
     const framework = FRAMEWORKS.find(f => f.id === state.selectedFramework) || getRandomFramework();
     const cta = state.selectedCTA === 'auto' ? getRotatingCTA() : CTAS.find(c => c.id === state.selectedCTA) || getRotatingCTA();
     const authorityLine = getRotatingAuthority();
+    const motorsportBridge = getRotatingMotorsportBridge();
     const topicInput = document.getElementById('single-topic')?.value.trim();
     const topic = topicInput || pillar.topics[Math.floor(Math.random() * pillar.topics.length)];
 
     const btn = document.getElementById('generate-single-btn');
     btn.classList.add('loading');
     btn.disabled = true;
-    setStatus('Generating post...', true);
+    setStatus('Generating LinkedIn post...', true);
 
     const resultContainer = document.getElementById('single-result');
     resultContainer.innerHTML = `
     <div class="empty-state">
       <span class="spinner" style="width:32px;height:32px;border-width:3px;"></span>
-      <p style="margin-top:1rem;">Generating your post...</p>
+      <p style="margin-top:1rem;">Generating your LinkedIn post...</p>
     </div>
   `;
 
@@ -653,7 +875,7 @@ async function handleGenerateSingle() {
             framework,
             cta,
             authorityLine,
-            raceContext: state.raceContext,
+            motorsportBridge,
             apiKey: settings.openaiApiKey,
             model: settings.aiModel || 'gpt-4o'
         });
@@ -665,6 +887,7 @@ async function handleGenerateSingle() {
             framework,
             cta,
             authorityLine,
+            motorsportBridge,
             topic: { headline: topic },
             imageUrl: '',
             edited: false
@@ -701,7 +924,6 @@ async function handleGenerateSingle() {
       </div>
     `;
 
-        // Attach single post actions
         document.getElementById('single-copy-btn')?.addEventListener('click', () => {
             copyToClipboard(post.content);
             showToast('Post copied!', 'success');
@@ -712,43 +934,20 @@ async function handleGenerateSingle() {
             showToast('Downloaded!', 'success');
         });
 
-        document.getElementById('single-edit-btn')?.addEventListener('click', () => {
-            const el = document.getElementById('single-post-content');
-            if (el.tagName === 'DIV') {
-                const textarea = document.createElement('textarea');
-                textarea.className = 'post-content-editing';
-                textarea.value = post.content;
-                textarea.id = 'single-post-content';
-                textarea.addEventListener('input', (e) => { post.content = e.target.value; });
-                el.replaceWith(textarea);
-                textarea.focus();
-            } else {
-                const div = document.createElement('div');
-                div.className = 'post-content';
-                div.id = 'single-post-content';
-                div.textContent = post.content;
-                el.replaceWith(div);
-            }
-        });
-
-        document.getElementById('single-regen-btn')?.addEventListener('click', () => {
-            handleGenerateSingle();
-        });
-
         document.getElementById('single-manus-btn')?.addEventListener('click', () => {
             window.open('https://manus.im/app/project/9nj8ezfHDDsjHV2jq4rDvG', '_blank');
         });
 
         document.getElementById('single-ghl-media-btn')?.addEventListener('click', () => {
-            window.open('https://app.gohighlevel.com/v2/location/EwAyQ03cV2yxVYaxnY5S/media-storage', '_blank');
+            window.open('https://app.gohighlevel.com/v2/location/vdgR8teGuIgHPMPzbQkK/media-storage', '_blank');
         });
 
-        showToast('Post generated!', 'success');
+        showToast('LinkedIn post generated!', 'success');
     } catch (err) {
         resultContainer.innerHTML = `
       <div class="empty-state">
-        <span class="empty-icon">❌</span>
-        <p>Error: ${escapeHtml(err.message)}</p>
+        <span class="empty-icon">⚠️</span>
+        <p>Failed to generate: ${err.message}</p>
       </div>
     `;
         showToast(`Error: ${err.message}`, 'error');
@@ -757,11 +956,4 @@ async function handleGenerateSingle() {
         btn.disabled = false;
         setStatus('Ready');
     }
-}
-
-// ─── Utility ──────────────────────────────────────────────────
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }

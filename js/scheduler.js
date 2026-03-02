@@ -1,20 +1,19 @@
 // ═══════════════════════════════════════════════════════════════
-// 🏁 RIDER SOCIAL MEDIA ENGINE — Scheduler
+// ⚡ BUSINESS LEADERS LINKEDIN ENGINE — Scheduler
 // CSV export and GHL Social Planner integration
+// LinkedIn-optimised posting times for business leaders
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Generate Schedule Dates ──────────────────────────────────
-// Weekdays 07:15, Weekends 09:00, starting from tomorrow
+// LinkedIn optimal: Tue-Thu 08:00-10:00, Mon/Fri 07:30, Weekend 09:30
 export function getScheduleDates(count = 7, startDate = null) {
     const dates = [];
     const start = startDate ? new Date(startDate) : new Date();
 
-    // If no explicit start, begin tomorrow
     if (!startDate) {
         start.setDate(start.getDate() + 1);
     }
 
-    // Reset time
     start.setHours(0, 0, 0, 0);
 
     let current = new Date(start);
@@ -22,19 +21,22 @@ export function getScheduleDates(count = 7, startDate = null) {
     while (dates.length < count) {
         const day = current.getDay(); // 0=Sun, 6=Sat
         const isWeekend = day === 0 || day === 6;
+        const isMidweek = day >= 2 && day <= 4; // Tue, Wed, Thu
 
         const scheduled = new Date(current);
         if (isWeekend) {
-            scheduled.setHours(9, 0, 0, 0);
+            scheduled.setHours(9, 30, 0, 0);
+        } else if (isMidweek) {
+            scheduled.setHours(8, 0, 0, 0);
         } else {
-            scheduled.setHours(7, 15, 0, 0);
+            scheduled.setHours(7, 30, 0, 0);
         }
 
         dates.push({
             date: new Date(scheduled),
             dayName: scheduled.toLocaleDateString('en-GB', { weekday: 'long' }),
             dateString: scheduled.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            timeString: isWeekend ? '09:00' : '07:15',
+            timeString: isWeekend ? '09:30' : (isMidweek ? '08:00' : '07:30'),
             isWeekend
         });
 
@@ -51,7 +53,8 @@ function formatGHLDate(date) {
     const dd = String(date.getDate()).padStart(2, '0');
     const hh = String(date.getHours()).padStart(2, '0');
     const min = String(date.getMinutes()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}T${hh}:${min}:00`;
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }
 
 // ─── Format Date Display ─────────────────────────────────────
@@ -66,27 +69,26 @@ function formatDisplayDate(date) {
 
 // ─── Export CSV for GHL Social Planner ────────────────────────
 export function exportCSV(posts, dates) {
-    // GHL Social Planner CSV columns
-    const headers = ['scheduled_at', 'content', 'platform', 'media_url', 'status'];
+    const headers = ['postAtSpecificTime (YYYY-MM-DD HH:mm:ss)', 'content', 'link (OGmetaUrl)', 'imageUrls', 'gifUrl', 'videoUrls'];
 
     const rows = posts.map((post, i) => {
         const date = dates[i]?.date || new Date();
         return [
             formatGHLDate(date),
             `"${(post.content || '').replace(/"/g, '""')}"`,
-            'facebook',
+            '',
             post.imageUrl || '',
-            'scheduled'
+            '',
+            ''
         ].join(',');
     });
 
     const csv = [headers.join(','), ...rows].join('\n');
 
     const now = new Date();
-    const filename = `social-posts-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.csv`;
+    const filename = `linkedin-posts-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.csv`;
 
     try {
-        // Method 1: Blob URL download
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -96,13 +98,11 @@ export function exportCSV(posts, dates) {
         document.body.appendChild(link);
         link.click();
 
-        // Delay cleanup so the browser has time to start the download
         setTimeout(() => {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         }, 1000);
     } catch (e) {
-        // Method 2: Fallback — open CSV as data URI in new tab
         console.warn('Blob download failed, using data URI fallback:', e);
         const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
         window.open(dataUri, '_blank');
@@ -113,16 +113,17 @@ export function exportCSV(posts, dates) {
 
 // ─── Build CSV String (for clipboard copy) ────────────────────
 export function buildCSVString(posts, dates) {
-    const headers = ['scheduled_at', 'content', 'platform', 'media_url', 'status'];
+    const headers = ['postAtSpecificTime (YYYY-MM-DD HH:mm:ss)', 'content', 'link (OGmetaUrl)', 'imageUrls', 'gifUrl', 'videoUrls'];
 
     const rows = posts.map((post, i) => {
         const date = dates[i]?.date || new Date();
         return [
             formatGHLDate(date),
             `"${(post.content || '').replace(/"/g, '""')}"`,
-            'facebook',
+            '',
             post.imageUrl || '',
-            'scheduled'
+            '',
+            ''
         ].join(',');
     });
 
@@ -138,7 +139,7 @@ export function downloadPostTxt(post, index = 0) {
 
     const pillarSlug = (post.pillar?.id || 'post').replace(/\s+/g, '-');
     link.href = url;
-    link.download = `post-${pillarSlug}-${index + 1}.txt`;
+    link.download = `linkedin-${pillarSlug}-${index + 1}.txt`;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
@@ -155,7 +156,6 @@ export async function copyToClipboard(text) {
         await navigator.clipboard.writeText(text);
         return true;
     } catch (err) {
-        // Fallback for older browsers
         const textarea = document.createElement('textarea');
         textarea.value = text;
         textarea.style.position = 'fixed';
@@ -193,7 +193,7 @@ export async function scheduleToGHL(posts, dates, ghlToken, locationId) {
                     type: 'post',
                     status: 'scheduled',
                     scheduledAt: formatGHLDate(dates[i].date),
-                    accounts: ['facebook'],
+                    accounts: ['linkedin'],
                     summary: posts[i].content,
                     media: posts[i].imageUrl ? [{ url: posts[i].imageUrl, type: 'image' }] : []
                 })
