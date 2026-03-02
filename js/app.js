@@ -698,7 +698,7 @@ window.appActions = {
         const promptText = promptEl ? promptEl.textContent : (state.posts[index]?.imageBrief || 'Create a professional image');
         copyToClipboard(promptText);
         showToast('Visual prompt copied! Paste it into Canva AI.', 'success');
-        window.open('https://www.canva.com/ai-image-generator/', '_blank');
+        window.open('https://www.canva.com/ai', '_blank');
     },
 
     copyVisualPrompt(index) {
