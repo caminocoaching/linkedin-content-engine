@@ -14,7 +14,8 @@ import {
     getDataLayerForPost, resetDataLayerRotations,
     SOCIAL_PROOF, CLIENT_LANGUAGE_PATTERNS, ANON_CASE_STUDIES, WOUTER_ALBLAS_REVIEW,
     getRotatingCaseStudy, getRotatingLanguagePattern, canUseSocialProof, resetReviewRotations,
-    getSeasonalContext
+    getSeasonalContext,
+    NEUROCHEMICAL_REFERENCE, VIDEO_STRUCTURE
 } from './content-engine.js';
 
 // ─── Master System Prompt (Business Leaders LinkedIn) ────────
@@ -388,7 +389,29 @@ You need 5 types of visuals rotating through weekly content. The variety itself 
 - Peak: Tuesday-Thursday 08:00-10:00 (also 12:00-14:00)
 - Good: Monday/Friday 07:30
 - Weekend: 09:30
-- Golden Hour: First 60 minutes determine distribution. Content must pass the quality test.`;
+- Golden Hour: First 60 minutes determine distribution. Content must pass the quality test.
+
+# NEUROCHEMICAL REFERENCE CARD
+Every video post MUST name at least one specific brain chemical and explain its role. Text posts should include chemical references where relevant (minimum 4 out of 7 posts per week).
+
+## Available Chemicals:
+- CORTISOL (Stress Hormone): Elevated by always-on culture, back-to-back meetings, sleep deprivation. Effect: shrinks prefrontal cortex, impairs decision-making. Reduced by: box breathing, nature, exercise, sleep. Key insight: the hidden tax on leadership.
+- DOPAMINE (Motivation & Reward): Triggered by novelty, anticipation, small wins. Effect: drives focus, motivation, creativity. Depleted by: constant notifications, routine. Key insight: rewards ANTICIPATION more than achievement.
+- SEROTONIN (Confidence & Status): Boosted by exercise, sunlight, gratitude. Effect: emotional stability, leadership presence. Depleted by: isolation, comparison. Key insight: linked to social hierarchy perception.
+- OXYTOCIN (Trust & Connection): Released by genuine conversation, vulnerability, shared goals. Effect: team cohesion, trust, psychological safety. Blocked by: micromanagement. Key insight: chemical basis of high-performing teams.
+- TESTOSTERONE (Confidence & Drive): Boosted by winning, exercise, power posture. Effect: risk tolerance, assertiveness, decision confidence. Key insight: affects BOTH men's and women's leadership confidence.
+- ENDORPHINS (Pain-Relief & Flow): Released by sustained effort, laughter, flow states. Effect: pain tolerance, euphoria, sustained focus. Key insight: released ~20 minutes into sustained effort, the gateway to flow state.
+
+# VIDEO PRODUCTION SYSTEM
+## Weekly Video Schedule: 4 videos (Mon/Tue/Thu/Sat) + 3 text posts (Wed/Fri/Sun)
+## Video Format: 60-second LinkedIn native video. Manus slide deck + HeyGen avatar + ElevenLabs voice.
+## Video Structure:
+- SECONDS 1-5 (Hook Slide): Provocative statement in large text. Avatar says it aloud. Must stop the scroll.
+- SECONDS 5-15 (The Chemical): Name the brain chemical, what it does, what most people get wrong.
+- SECONDS 15-40 (The Insight): 2-3 slides with key finding, research source, business application.
+- SECONDS 40-50 (The Bridge): Connect to viewer's daily life. Direct and personal.
+- SECONDS 50-60 (Engagement Trigger): Question for comments. Avatar asks it on camera.
+## CRITICAL FOR ELEVENLABS: All numbers in narration scripts must be written out in full text. "Two thousand two hundred and forty nine" not "2,249". "Eighty one percent" not "81%".`;
 
 
 // ─── Generate Article Topics with Web Search (Weekly Wizard Step 1) ──
@@ -506,6 +529,9 @@ Return ONLY the JSON array with 7 items.`;
 // ─── Generate a Single Post ──────────────────────────────────
 export async function generatePost({ topic, pillar, framework, cta, authorityLine, motorsportBridge, apiKey, model = 'gpt-4o', campaignDay = null, dataLayer = null, reviewLayer = null, contentDNA = null }) {
 
+    // Determine if this is a video day
+    const isVideoDay = contentDNA?.postFormat === 'video';
+
     const campaignNote = campaignDay
         ? `\nCAMPAIGN POSITION: This is ${campaignDay.day} — Purpose: ${campaignDay.purpose}. Target emotion: ${campaignDay.emotion}. Word count: ${campaignDay.wordCount}.`
         : '';
@@ -601,6 +627,35 @@ MOTORSPORT BRIDGE TO INCLUDE (one sentence connecting business insight to the pa
 CTA TO APPEND (after a blank line, completely unrelated to post body):
 ${cta.ctaTemplate}
 ${campaignNote}
+${isVideoDay ? `
+═══ VIDEO DAY — ADDITIONAL REQUIREMENTS ═══
+
+This is a VIDEO day. In addition to the standard LinkedIn post text (which accompanies the video as a caption), you MUST also generate a complete VIDEO SCRIPT.
+
+PRIMARY CHEMICAL: ${contentDNA?.primaryChemical || 'Match to the content topic'}
+${pillar.chemicalNote ? `CHEMICAL NOTE: ${pillar.chemicalNote}` : ''}
+
+VIDEO STRUCTURE (60 seconds, Manus slides + HeyGen avatar + ElevenLabs voice):
+
+1. HOOK SLIDE (seconds 1-5): One provocative statement in large text. Avatar says it aloud. Must stop the scroll.
+   Example: "Cortisol is shrinking your brain. Literally." or "Dopamine doesn't reward success. It rewards anticipation."
+
+2. THE CHEMICAL (seconds 5-15): Name the specific brain chemical, what it does, and the one thing most people get wrong about it. One clean slide. Avatar narrates.
+
+3. THE INSIGHT (seconds 15-40): 2-3 slides with the key finding. Research source, specific data point, what it means for a business leader. Avatar narrates each slide.
+
+4. THE BRIDGE (seconds 40-50): One slide connecting to the viewer's daily life. Direct, personal, specific. Avatar delivers looking at camera.
+
+5. ENGAGEMENT TRIGGER (seconds 50-60): Final slide with a question. Avatar asks it on camera. CTA as text overlay.
+
+SLIDE DESIGN: Clean, minimal. Dark backgrounds. Bold white/accent text. One key number or statement per slide. Camino branding.
+
+CRITICAL FOR ELEVENLABS: ALL numbers in the narration script MUST be written out as full text words:
+- "Two thousand two hundred and forty nine" NOT "2,249"
+- "Eighty one percent" NOT "81%"
+- "Nine point one one out of ten" NOT "9.11/10"
+- "Three hundred and twelve" NOT "312"
+` : ''}
 
 FOLLOW THE 6-STEP VIRAL FRAMEWORK EXACTLY:
 
@@ -642,12 +697,24 @@ FORMATTING RULES:
 
 RETURN FORMAT: Return a JSON object with these fields:
 {
-  "postText": "The full LinkedIn post following all 6 steps above, ending with the CTA",
+  "postText": "The full LinkedIn post following all 6 steps above, ending with the CTA${isVideoDay ? ' (this is the POST CAPTION that accompanies the video on LinkedIn)' : ''}",
   "alternativeHook": "A completely different Step 1 opening line that Craig could swap in",
   "engagementTrigger": "The Step 5 engagement trigger you used, isolated so Craig can review and strengthen it",
   "storyPrompt": "A specific suggestion for where Craig should inject a personal story. E.g. 'Replace the authority line with a real story about a CEO client who experienced this exact pattern last month' or 'Add a line about the specific rider at Phillip Island who...'",
   "imageBrief": "A specific visual brief that MATCHES THE ACTUAL POST CONTENT (the main topic and WOW hook), NOT the data layer insight. The image should reinforce what the post is ABOUT. For DATA CARDS: specify the exact stat from the post's main topic, subtext, and source to display. For PADDOCK PHOTOS: suggest which type of paddock photo would reinforce this post's main theme (grid walk, debrief, pit lane, etc). For AI IMAGES: describe a neuroscience visualisation concept that matches the post's core topic. For TEXT QUOTE CARDS: write the exact quote from the post to display. For CAROUSEL DOCUMENTS: outline all 6-8 slide headlines matching the post content.",
-  "visualType": "The visual type assigned (data-card, paddock-photo, ai-image, text-quote, or carousel)",
+  "visualType": "The visual type assigned (data-card, paddock-photo, ai-image, text-quote, or carousel)"${isVideoDay ? `,
+  "videoScript": {
+    "hookLine": "The provocative statement for slide 1 (what appears on screen AND what avatar says first)",
+    "primaryChemical": "The brain chemical featured in this video (cortisol, dopamine, serotonin, oxytocin, testosterone, or endorphins)",
+    "slides": [
+      { "slideNumber": 1, "slideText": "Text that appears on the Manus slide", "narration": "What the avatar says for this slide, in natural SPOKEN English with all numbers written as full text words" },
+      { "slideNumber": 2, "slideText": "...", "narration": "..." },
+      { "slideNumber": 3, "slideText": "...", "narration": "..." },
+      { "slideNumber": 4, "slideText": "...", "narration": "..." },
+      { "slideNumber": 5, "slideText": "...", "narration": "..." }
+    ],
+    "closingQuestion": "The engagement question the avatar asks on the final slide"
+  }` : ''},
   "dataLayerUsed": {
     "anchor": "${dataLayer?.anchor?.id || 'none'}",
     "insight": "${dataLayer?.insight?.id || 'none'}",
@@ -711,7 +778,7 @@ export async function generatePosts(topics, config) {
             result = { status: 'rejected', reason: err };
         }
 
-        let content = '', alternativeHook = '', storyPrompt = '', imageBrief = '', engagementTrigger = '', dataLayerUsed = null;
+        let content = '', alternativeHook = '', storyPrompt = '', imageBrief = '', engagementTrigger = '', dataLayerUsed = null, videoScript = null;
         if (result.status === 'fulfilled') {
             const val = result.value;
             if (typeof val === 'object' && val.postText) {
@@ -721,6 +788,7 @@ export async function generatePosts(topics, config) {
                 imageBrief = typeof val.imageBrief === 'string' ? val.imageBrief : (val.imageBrief ? JSON.stringify(val.imageBrief) : '');
                 engagementTrigger = val.engagementTrigger || '';
                 dataLayerUsed = val.dataLayerUsed || dataLayers[i];
+                videoScript = val.videoScript || null;
             } else if (typeof val === 'string') {
                 content = val;
             } else {
@@ -730,6 +798,7 @@ export async function generatePosts(topics, config) {
             content = `Error generating post: ${result.reason}`;
         }
 
+        const schedule = WEEKLY_SCHEDULE[i];
         results.push({
             id: `post-${Date.now()}-${i}`,
             content,
@@ -748,7 +817,10 @@ export async function generatePosts(topics, config) {
             status: result.status,
             imageUrl: '',
             edited: false,
-            campaignDay: campaignDays ? campaignDays[i] : null
+            campaignDay: campaignDays ? campaignDays[i] : null,
+            postFormat: schedule?.postFormat || 'text',
+            primaryChemical: schedule?.primaryChemical || null,
+            videoScript: videoScript
         });
 
         console.log(`✅ Post ${i + 1}/7 generated (${result.status})`);

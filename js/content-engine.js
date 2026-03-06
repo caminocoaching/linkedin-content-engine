@@ -20,6 +20,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Clarity Under Pressure',
     searchCategory: 'Workplace productivity research, cognitive decline studies, stress impact data, decision fatigue, burnout statistics.',
     emotionalTarget: 'That is costing me more than I realised.',
+    primaryChemical: 'cortisol',
+    chemicalNote: 'Every Hidden Cost post should name cortisol and explain the specific damage mechanism.',
     subTopicRotation: [
       'Multitasking Mania — cognitive switching tax, 110 bits/sec conscious limit',
       'Always-On Culture — cortisol addiction, permanent emergency mode',
@@ -46,6 +48,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Focus & Flow',
     searchCategory: 'Neuroplasticity studies, cognitive enhancement research, brain imaging discoveries, acetylcholine/dopamine/serotonin breakthroughs, longevity and brain health.',
     emotionalTarget: 'I had no idea the brain could do that.',
+    primaryChemical: 'rotate',
+    chemicalNote: 'Rotate through all six chemicals (cortisol, dopamine, serotonin, oxytocin, testosterone, endorphins). Match the chemical to the discovery being discussed.',
     topics: [
       'An NIH-funded study just showed we can reverse cognitive aging by a decade with targeted brain exercises',
       'Your prefrontal cortex is not in permanent decline. It is in a state of underuse.',
@@ -63,6 +67,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Feedback & Debrief Loops',
     searchCategory: 'Famous founders cognitive habits, athletes mental preparation routines, inventors brain science, historical figures neuroscience connections.',
     emotionalTarget: 'If they did it, I can too. And now I understand WHY it works.',
+    primaryChemical: 'match',
+    chemicalNote: 'Match the chemical to the famous person\'s habit. Kobe = dopamine (anticipatory reward loops). Bezos = cortisol (morning low point). Beckham = endorphins (sustained practice triggering flow). Blakely = dopamine (prospective encoding). Jobs = endorphins + dopamine (bilateral movement).',
     exampleSubjects: [
       'James Dyson: 5,127 prototypes (neuroplasticity through iteration)',
       'Kobe Bryant: 4-hour pre-game film study (visual cortex pre-loading)',
@@ -89,6 +95,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Feedback & Debrief Loops',
     searchCategory: 'NO external search — proprietary data only.',
     emotionalTarget: 'This data is unique. Nobody else has this. And it applies directly to my leadership.',
+    primaryChemical: 'match',
+    chemicalNote: 'Connect debrief findings to chemicals. Confidence = serotonin + testosterone balance. Flow state = endorphins + dopamine. Inner critic = cortisol spike. Pre-session preparation = cortisol reduction + dopamine priming.',
     topics: [
       'Riders scoring 8.5+/10 confidence achieve personal bests at 2.7x the rate',
       '81% of successful sessions use box breathing preparation',
@@ -106,6 +114,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Focus & Flow',
     searchCategory: 'Flow state productivity (McKinsey 500%), exercise and BDNF, sleep and executive function, meditation and prefrontal cortex, walking and creativity, nature and stress recovery.',
     emotionalTarget: 'I want that edge. And it is more accessible than I thought.',
+    primaryChemical: 'dopamine,serotonin,endorphins',
+    chemicalNote: 'Always name the specific chemical being boosted by the positive practice.',
     topics: [
       'Executives in flow are 500% more productive. McKinsey measured it.',
       'A 20-minute walk increases creative output by 81%. Stanford measured it. Immediately.',
@@ -123,6 +133,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Execution Rhythm',
     searchCategory: 'Breathing protocols, focus techniques, decision frameworks, recovery strategies, preparation routines — all with research backing.',
     emotionalTarget: 'I can try this today. This person gives real value for free.',
+    primaryChemical: 'match',
+    chemicalNote: 'Name the specific chemical each technique targets. Box breathing = cortisol reduction. Walking = endorphin + dopamine release. Visualisation = dopamine (prospective encoding). Gratitude = serotonin boost.',
     toolsToRotate: [
       'Box breathing: 4-4-4-4 protocol, parasympathetic activation, cortisol reduction',
       'The 2-minute pre-meeting reset: centering technique before high-stakes situations',
@@ -149,6 +161,8 @@ export const PILLARS = [
     winningFormulaPillar: 'Influence & Culture',
     searchCategory: 'Well-known figures and their specific habits, routines, mental preparation, or breakthrough moments connected to neuroscience.',
     emotionalTarget: 'If [famous person] used this principle to achieve [extraordinary thing], I can use it in my business.',
+    primaryChemical: 'match',
+    chemicalNote: 'Match to the figure\'s specific practice. Name the chemical mechanism that made their habit work.',
     topics: [
       'Google does not give engineers 20% time because they are generous. The neuroscience explains why.',
       'Patagonia\'s CEO surfs every morning. His prefrontal cortex is the reason his company outperforms.',
@@ -322,6 +336,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'scary',
     ctaId: 'cta-a',
     visualType: 'data-card',
+    postFormat: 'video',
+    primaryChemical: 'cortisol',
     emotion: 'fear',
     polarity: 'negative',
     evidenceType: 'external-research',
@@ -329,7 +345,7 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'cost-post',
     searchMandate: 'Find ONE alarming external study about cognitive damage, cortisol, burnout, chronic stress, or decision fatigue from a named university or publication. This is the ONLY problem/cost post this week. Rotate through the 7 sub-topics (multitasking, always-on, open-door, decision bottleneck, routine stagnation, purpose disconnection, grind delusion) cycling weekly.',
     searchFocus: 'workplace productivity research, cognitive decline studies, stress impact data, decision fatigue research, burnout statistics',
-    dayBrief: 'The hidden cost post. The ONLY negative post this week. Emotional target: "That is costing me more than I realised."'
+    dayBrief: 'The hidden cost post. VIDEO FORMAT. Scary stat as 60-second explainer. Cortisol-led. The ONLY negative post this week. Emotional target: "That is costing me more than I realised."'
   },
   {
     day: 'Tuesday',
@@ -337,6 +353,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'strange',
     ctaId: 'cta-b',
     visualType: 'ai-image',
+    postFormat: 'video',
+    primaryChemical: 'rotate',
     emotion: 'wonder',
     polarity: 'positive',
     evidenceType: 'breakthrough-science',
@@ -344,7 +362,7 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'breakthroughs',
     searchMandate: 'Find a POSITIVE neuroscience breakthrough — research showing the brain can do something previously thought impossible. Neuroplasticity, cognitive enhancement, longevity. This is the viral post formula (19,845 impressions): possibility, not problems.',
     searchFocus: 'neuroplasticity breakthroughs, cognitive aging reversal, brain training discoveries, acetylcholine dopamine serotonin research',
-    dayBrief: 'Brain breakthrough. POSITIVE. Emotional target: "I had no idea the brain could do that."'
+    dayBrief: 'Brain breakthrough. VIDEO FORMAT. Neuroscience discovery as viral video. POSITIVE. Emotional target: "I had no idea the brain could do that."'
   },
   {
     day: 'Wednesday',
@@ -352,6 +370,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'familiar',
     ctaId: 'cta-d',
     visualType: 'paddock-photo',
+    postFormat: 'text',
+    primaryChemical: 'match',
     emotion: 'aspiration',
     polarity: 'positive',
     evidenceType: 'human-achievement',
@@ -359,7 +379,7 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'human-achievement',
     searchMandate: 'Find a famous founder, inventor, athlete, or leader who achieved something extraordinary AND explain the neuroscience behind WHY. Never use the same person twice in a 4-week cycle. Rotate through sport, business, entertainment, and science.',
     searchFocus: 'famous innovators neuroscience, founders brain science, historical inventions cognitive explanation, elite performers brain chemistry',
-    dayBrief: 'Human achievement through neuroscience. POSITIVE. Emotional target: "If they did it, I can too."'
+    dayBrief: 'Human achievement through neuroscience. TEXT POST with data card or paddock photo. POSITIVE. Emotional target: "If they did it, I can too."'
   },
   {
     day: 'Thursday',
@@ -367,6 +387,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'strange',
     ctaId: 'cta-a',
     visualType: 'data-card',
+    postFormat: 'video',
+    primaryChemical: 'match',
     emotion: 'credibility',
     polarity: 'positive',
     evidenceType: 'proprietary-data',
@@ -374,7 +396,7 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'camino-data-wins',
     searchMandate: 'DO NOT search externally. Use ONLY Craig\'s proprietary data from 2,249 debriefs. ONE authority anchor + ONE insight hook + ONE bridge pattern. WOW not HOW.',
     searchFocus: 'NO external search — proprietary data only: confidence 2.7x, 81% box breathing, centering gap, flow improvements, win rate correlations',
-    dayBrief: 'Camino Data Insight. POSITIVE. Emotional target: "This data is unique. Nobody else has this."'
+    dayBrief: 'Camino Data Insight. VIDEO FORMAT. Proprietary data visualised with avatar narration. POSITIVE. Emotional target: "This data is unique. Nobody else has this."'
   },
   {
     day: 'Friday',
@@ -382,6 +404,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'sexy',
     ctaId: 'cta-c',
     visualType: 'paddock-photo',
+    postFormat: 'text',
+    primaryChemical: 'dopamine,serotonin,endorphins',
     emotion: 'desire',
     polarity: 'positive',
     evidenceType: 'positive-performance-research',
@@ -389,7 +413,7 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'positive-performance-data',
     searchMandate: 'Find research showing what WORKS and what high performers DO differently. McKinsey flow 500%, exercise BDNF, sleep executive function, meditation prefrontal cortex, cold exposure norepinephrine. Lead with the positive outcome, NEVER the problem.',
     searchFocus: 'flow state productivity McKinsey, exercise brain BDNF, sleep executive function, meditation prefrontal cortex, walking creativity Stanford',
-    dayBrief: 'The Positive Edge. POSITIVE. Emotional target: "I want that edge. And it is more accessible than I thought."'
+    dayBrief: 'The Positive Edge. TEXT POST with AI image or strong visual. POSITIVE. Emotional target: "I want that edge. And it is more accessible than I thought."'
   },
   {
     day: 'Saturday',
@@ -397,6 +421,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'free-value',
     ctaId: 'cta-b',
     visualType: 'carousel',
+    postFormat: 'video',
+    primaryChemical: 'match',
     emotion: 'empowerment',
     polarity: 'positive',
     evidenceType: 'actionable-protocol',
@@ -404,7 +430,7 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'actionable-tools',
     searchMandate: 'DO NOT search for problems. GIVE one specific actionable technique the reader can use immediately, backed by data. Give the tool. Hold back the full system. Rotate through: box breathing, 2-min pre-meeting reset, 90-min focus block, post-decision debrief, evening wind-down, strategic walking, Monday clarity exercise.',
     searchFocus: 'breathing protocols, focus techniques, decision frameworks, recovery strategies, preparation routines — with neuroscience backing',
-    dayBrief: 'The Tool. POSITIVE. Emotional target: "I can try this today. This person gives real value for free."'
+    dayBrief: 'The Tool. VIDEO FORMAT. Teaching technique with "try this with me" format. POSITIVE. Emotional target: "I can try this today. This person gives real value for free."'
   },
   {
     day: 'Sunday',
@@ -412,6 +438,8 @@ export const WEEKLY_SCHEDULE = [
     frameworkId: 'familiar',
     ctaId: 'cta-d',
     visualType: 'text-quote',
+    postFormat: 'text',
+    primaryChemical: 'match',
     emotion: 'confidence',
     polarity: 'positive',
     evidenceType: 'famous-figure-neuroscience',
@@ -419,9 +447,98 @@ export const WEEKLY_SCHEDULE = [
     researchCategory: 'winning-ways',
     searchMandate: 'Find a household name from sport, business, entertainment, or science whose specific habit or achievement can be explained through neuroscience. Formula: Famous person + specific thing they did + brain science behind why + "you can apply this." Never use same person twice in 4 weeks.',
     searchFocus: 'well-known figures habits neuroscience, famous leaders routines brain science, household names mental preparation, breakthrough moments cognitive explanation',
-    dayBrief: 'Winning Ways. POSITIVE. Emotional target: "If [famous person] used this principle, I can use it in my business."'
+    dayBrief: 'Winning Ways. TEXT POST with quote card or carousel. POSITIVE. Emotional target: "If [famous person] used this principle, I can use it in my business."'
   }
 ];
+
+// ─── Neurochemical Reference Card ─────────────────────────────
+// Every video post names at least one brain chemical.
+// Text posts should include chemical references where relevant (min 4/7 per week).
+export const NEUROCHEMICAL_REFERENCE = {
+  cortisol: {
+    name: 'Cortisol',
+    label: 'The Stress Hormone',
+    icon: '🔴',
+    color: '#e84444',
+    elevatedBy: 'Always-on culture, back-to-back meetings, sleep deprivation, constant email checking, conflict avoidance, Sunday evening dread.',
+    effect: 'Shrinks prefrontal cortex with chronic exposure, impairs decision-making, suppresses creativity, triggers emotional reactivity, reduces testosterone, disrupts sleep architecture.',
+    reducedBy: 'Box breathing, nature exposure, exercise, quality sleep, social connection, laughter.',
+    keyInsight: 'Cortisol is the hidden tax on leadership. The CEO who is "always on" is chemically degrading the organ that built their business.',
+    businessApp: 'Chronic elevation literally makes leaders measurably less intelligent over time.'
+  },
+  dopamine: {
+    name: 'Dopamine',
+    label: 'The Motivation & Reward Chemical',
+    icon: '🟡',
+    color: '#ffd43b',
+    triggeredBy: 'Novelty, anticipation of reward, small wins, goal progress, learning something new, completing tasks.',
+    effect: 'Drives focus, motivation, risk assessment, creative problem-solving, pattern recognition.',
+    depletedBy: 'Constant notifications, social media scrolling, routine without variety, achieved goals without new ones.',
+    keyInsight: 'Dopamine rewards ANTICIPATION more than achievement. This is why the pursuit feels better than the win.',
+    businessApp: 'The best CEOs design dopamine loops into their week. Small wins on Monday. Progress milestones on Wednesday. New learning on Friday.'
+  },
+  serotonin: {
+    name: 'Serotonin',
+    label: 'The Confidence & Status Chemical',
+    icon: '🟢',
+    color: '#69db7c',
+    boostedBy: 'Exercise, sunlight, gratitude practice, social recognition, purposeful work, adequate tryptophan intake.',
+    effect: 'Emotional stability, self-worth, leadership presence, patience, long-term thinking.',
+    depletedBy: 'Isolation, lack of purpose, comparison with others, poor nutrition, vitamin D deficiency.',
+    keyInsight: 'Linked to social hierarchy perception. Leaders with healthy serotonin levels command rooms without raising their voice.',
+    businessApp: 'Imposter syndrome has a chemical signature: low serotonin. Exercise before a board meeting changes your neurochemistry, not just your mood.'
+  },
+  oxytocin: {
+    name: 'Oxytocin',
+    label: 'The Trust & Connection Chemical',
+    icon: '🔵',
+    color: '#4dabf7',
+    releasedBy: 'Genuine conversation, vulnerability, physical proximity, shared goals, active listening, eye contact, acts of generosity.',
+    effect: 'Team cohesion, trust, collaboration, psychological safety, reduced cortisol.',
+    blockedBy: 'Micromanagement, remote isolation, transactional relationships, fear-based cultures.',
+    keyInsight: 'The chemical basis of high-performing teams. Trust removes the cognitive load of self-protection.',
+    businessApp: 'A ten-minute genuine conversation produces more oxytocin (and better outcomes) than a sixty-minute status update meeting.'
+  },
+  testosterone: {
+    name: 'Testosterone',
+    label: 'The Confidence & Drive Chemical',
+    icon: '🟠',
+    color: '#ff6b35',
+    boostedBy: 'Winning (even small victories), exercise, power posture, competitive success, adequate sleep, cold exposure.',
+    effect: 'Risk tolerance, assertiveness, decision confidence, competitive drive, spatial reasoning.',
+    depletedBy: 'Chronic stress (cortisol directly suppresses testosterone), poor sleep, sedentary lifestyle, sustained defeat without recovery.',
+    keyInsight: 'Affects BOTH men\'s and women\'s leadership confidence. The winner effect is real: winning creates a testosterone spike that makes the next win more likely.',
+    businessApp: 'Leaders who start their day with a physical win (exercise, cold shower) carry elevated testosterone into their first decision of the day.'
+  },
+  endorphins: {
+    name: 'Endorphins',
+    label: 'The Pain-Relief & Flow Chemical',
+    icon: '🟣',
+    color: '#9775fa',
+    releasedBy: 'Sustained physical effort, laughter, flow states, creative expression, music, spicy food.',
+    effect: 'Pain tolerance, euphoria, stress resilience, sustained focus, gateway to flow state.',
+    keyInsight: 'Released approximately twenty minutes into sustained effort. This explains why the first twenty minutes of deep work feel awful but minute twenty-five feels effortless.',
+    businessApp: 'The leader who exercises before work is flooding their brain with the same chemical that unlocks flow state. Exercise is the most underused leadership performance tool.'
+  }
+};
+
+// ─── Video Structure (60-second format) ───────────────────────
+// Production: Manus slide deck + HeyGen avatar + ElevenLabs voice
+export const VIDEO_STRUCTURE = {
+  targetLength: 60,
+  range: { min: 30, max: 90 },
+  production: 'Manus slide deck + HeyGen AI avatar (circle overlay, corner position) + ElevenLabs cloned voice narration',
+  sections: [
+    { name: 'Hook Slide', seconds: '1-5', description: 'One provocative statement in large text on screen. Avatar appears in corner and says it out loud. Must stop the scroll.' },
+    { name: 'The Chemical', seconds: '5-15', description: 'Name the specific chemical, what it does, and the one thing most people get wrong about it. One slide with clean visual of chemical name or simple brain graphic. Avatar narrates.' },
+    { name: 'The Insight', seconds: '15-40', description: 'Two to three slides walking through the key finding. Research source, specific data point, what it means for a business leader. Avatar narrates each slide transition.' },
+    { name: 'The Bridge', seconds: '40-50', description: 'One slide connecting to the viewer\'s daily life. Direct, personal, specific. Avatar delivers looking at camera.' },
+    { name: 'Engagement Trigger', seconds: '50-60', description: 'Final slide with a question. Avatar asks the question. CTA appears as text overlay or in post caption.' }
+  ],
+  slideDesign: 'Clean, minimal design. Dark backgrounds with bold white/accent text. One key number or statement per slide. Camino branding consistent across all slides. No clutter.',
+  avatarPosition: 'Circle overlay in bottom-right corner.',
+  elevenLabsRule: 'All numbers in the narration script must be written out in full text, not numerals. "Two thousand two hundred and forty nine" not "2,249". "Eighty one percent" not "81%".'
+};
 
 
 export const AUTHORITY_LINES = [

@@ -11,13 +11,14 @@ import {
     getRotatingMotorsportBridge, resetMotorsportBridgeRotation,
     getWeeklyPillars, getWeeklyFrameworks, getWeeklyCTAs,
     getRandomPillar, getRandomFramework,
-    getSeasonalContext
-} from './content-engine.js?v=20260228';
+    getSeasonalContext,
+    NEUROCHEMICAL_REFERENCE, VIDEO_STRUCTURE
+} from './content-engine.js?v=20260306';
 
 import {
     generateTopics, generatePost, generatePosts, regeneratePost,
     generateImagePrompt, getVisualTypeForDay, getVisualGuidance
-} from './ai-service.js?v=20260228';
+} from './ai-service.js?v=20260306';
 
 import {
     getScheduleDates, exportCSV, buildCSVString, downloadPostTxt, copyToClipboard
@@ -325,6 +326,9 @@ function renderTopics() {
         const campaignDay = i < CAMPAIGN_ARC.length ? CAMPAIGN_ARC[i] : null;
         const schedule = WEEKLY_SCHEDULE[i];
         const visualType = schedule?.visualType ? VISUAL_TYPES[schedule.visualType] : null;
+        const isVideoDay = schedule?.postFormat === 'video';
+        const chemKey = schedule?.primaryChemical && schedule.primaryChemical !== 'match' && schedule.primaryChemical !== 'rotate' ? schedule.primaryChemical.split(',')[0] : null;
+        const chemRef = chemKey && NEUROCHEMICAL_REFERENCE[chemKey] ? NEUROCHEMICAL_REFERENCE[chemKey] : null;
 
         return `
       <div class="topic-card" data-index="${i}">
@@ -334,6 +338,8 @@ function renderTopics() {
           </span>
           <span class="framework-badge">${framework.icon} ${framework.name}</span>
           ${visualType ? `<span class="framework-badge" style="border: 1px solid ${visualType.color}30; color: ${visualType.color};">${visualType.icon} ${visualType.name}</span>` : ''}
+          <span class="framework-badge" style="border: 1px solid ${isVideoDay ? '#ff6b9d' : '#69db7c'}30; color: ${isVideoDay ? '#ff6b9d' : '#69db7c'}; font-weight: 700; font-size: 0.68rem;">${isVideoDay ? '🎬 VIDEO' : '📝 TEXT'}</span>
+          ${chemRef ? `<span class="framework-badge" style="border: 1px solid ${chemRef.color}30; color: ${chemRef.color}; font-size: 0.66rem;">${chemRef.icon} ${chemRef.name}</span>` : ''}
           ${campaignDay ? `<span class="framework-badge">📅 ${campaignDay.day}</span>` : ''}
         </div>
         <div class="topic-headline">${topic.headline || 'Topic ' + (i + 1)}</div>
@@ -411,6 +417,11 @@ function renderPosts() {
         const campaignDay = post.campaignDay || (i < CAMPAIGN_ARC.length ? CAMPAIGN_ARC[i] : null);
         const visualType = getVisualTypeForDay(i);
         const visualGuidance = getVisualGuidance(post, i);
+        const isVideoPost = post.postFormat === 'video';
+        const chemicalKey = post.primaryChemical && post.primaryChemical !== 'match' && post.primaryChemical !== 'rotate' ? post.primaryChemical.split(',')[0] : null;
+        const chemicalRef = chemicalKey && NEUROCHEMICAL_REFERENCE[chemicalKey] ? NEUROCHEMICAL_REFERENCE[chemicalKey] : null;
+        const videoChemicalKey = post.videoScript && post.videoScript.primaryChemical ? post.videoScript.primaryChemical : null;
+        const videoChemicalRef = videoChemicalKey && NEUROCHEMICAL_REFERENCE[videoChemicalKey] ? NEUROCHEMICAL_REFERENCE[videoChemicalKey] : null;
 
         const isCollapsed = post.collapsed || false;
 
@@ -424,7 +435,9 @@ function renderPosts() {
             </span>
             <span class="framework-badge">${post.framework.icon} ${post.framework.name}</span>
             <span class="framework-badge" style="border: 1px solid ${visualType.color}30; color: ${visualType.color}; font-weight: 600;">${visualType.icon} ${visualType.name}</span>
-            ${campaignDay ? `<span class="framework-badge">📅 ${campaignDay.day} — ${campaignDay.purpose}</span>` : ''}
+            <span class="framework-badge" style="border: 1px solid ${isVideoPost ? '#ff6b9d' : '#69db7c'}30; color: ${isVideoPost ? '#ff6b9d' : '#69db7c'}; font-weight: 700; font-size: 0.68rem;">${isVideoPost ? '🎬 VIDEO' : '📝 TEXT'}</span>
+            ${chemicalRef ? '<span class="framework-badge" style="border: 1px solid ' + chemicalRef.color + '30; color: ' + chemicalRef.color + '; font-weight: 600; font-size: 0.66rem;">' + chemicalRef.icon + ' ' + chemicalRef.name + '</span>' : ''}
+            ${campaignDay ? '<span class="framework-badge">📅 ' + campaignDay.day + ' \u2014 ' + campaignDay.purpose + '</span>' : ''}
           </div>
           <div class="post-card-header-right">
             ${post.imageUrl ? '<span class="post-status-badge complete" title="Image attached">✅ Image</span>' : '<span class="post-status-badge pending" title="No image yet">⬜ No image</span>'}
@@ -463,6 +476,55 @@ function renderPosts() {
           <strong style="color:var(--gold);">✍️ Add Your Story:</strong> <span style="color:var(--text-secondary);">${escapeHtml(post.storyPrompt)}</span>
         </div>
         ` : ''}
+
+        ${isVideoPost && post.videoScript ? (() => {
+                const vs = post.videoScript;
+                const vcRef = videoChemicalRef;
+                let html = '<div class="post-video-script" style="margin:0.5rem 1rem;padding:0.8rem;background:linear-gradient(135deg,rgba(255,107,157,0.06),rgba(151,117,250,0.06));border:1px solid rgba(255,107,157,0.15);border-radius:var(--r-sm);">';
+                html += '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap;">';
+                html += '<strong style="color:#ff6b9d;font-size:0.85rem;">\ud83c\udfac Video Script (60s)</strong>';
+                html += '<span style="padding:0.1rem 0.4rem;background:rgba(255,107,157,0.12);color:#ff6b9d;border-radius:999px;font-size:0.62rem;font-weight:600;">Manus + HeyGen + ElevenLabs</span>';
+                if (vcRef) {
+                    html += '<span style="padding:0.1rem 0.4rem;background:' + vcRef.color + '18;color:' + vcRef.color + ';border-radius:999px;font-size:0.62rem;font-weight:600;">' + vcRef.icon + ' ' + vcRef.name + ': ' + vcRef.label + '</span>';
+                }
+                html += '</div>';
+                if (vs.hookLine) {
+                    html += '<div style="margin-bottom:0.5rem;padding:0.5rem;background:rgba(255,107,157,0.08);border-radius:var(--r-xs);">';
+                    html += '<div style="color:#ff6b9d;font-size:0.68rem;font-weight:600;margin-bottom:0.2rem;">\ud83c\udfaf HOOK LINE (Slide 1)</div>';
+                    html += '<div style="color:var(--text-primary);font-size:0.82rem;font-weight:600;font-style:italic;">\u201c' + escapeHtml(vs.hookLine) + '\u201d</div>';
+                    html += '</div>';
+                }
+                if (vs.slides && vs.slides.length > 0) {
+                    html += '<div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.5rem;">';
+                    vs.slides.forEach(function (slide, si) {
+                        const borderColor = si === 0 ? '#ff6b9d' : si === vs.slides.length - 1 ? '#69db7c' : '#4dabf7';
+                        html += '<div style="display:grid;grid-template-columns:2.5rem 1fr;gap:0.5rem;padding:0.4rem 0.5rem;background:rgba(6,8,14,0.4);border-radius:var(--r-xs);border-left:2px solid ' + borderColor + ';">';
+                        html += '<div style="text-align:center;">';
+                        html += '<div style="color:var(--text-muted);font-size:0.58rem;font-weight:600;">SLIDE</div>';
+                        html += '<div style="color:var(--text-primary);font-size:0.85rem;font-weight:700;">' + (slide.slideNumber || si + 1) + '</div>';
+                        html += '</div>';
+                        html += '<div>';
+                        html += '<div style="color:var(--text-primary);font-size:0.75rem;font-weight:600;margin-bottom:0.15rem;">\ud83d\udcca ' + escapeHtml(slide.slideText || '') + '</div>';
+                        html += '<div style="color:var(--text-secondary);font-size:0.72rem;font-style:italic;">\ud83d\udde3\ufe0f \u201c' + escapeHtml(slide.narration || '') + '\u201d</div>';
+                        html += '</div>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+                if (vs.closingQuestion) {
+                    html += '<div style="margin-bottom:0.5rem;padding:0.5rem;background:rgba(105,219,124,0.08);border-radius:var(--r-xs);">';
+                    html += '<div style="color:var(--green);font-size:0.68rem;font-weight:600;margin-bottom:0.2rem;">\ud83d\udcac CLOSING QUESTION</div>';
+                    html += '<div style="color:var(--text-primary);font-size:0.78rem;font-style:italic;">\u201c' + escapeHtml(vs.closingQuestion) + '\u201d</div>';
+                    html += '</div>';
+                }
+                html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.4rem;">';
+                html += '<button class="post-action-btn" onclick="window.appActions.copyNarration(' + i + ')" title="Copy full narration script for ElevenLabs" style="color:#ff6b9d;border-color:rgba(255,107,157,0.3);font-size:0.68rem;padding:0.2rem 0.5rem;">\ud83d\udde3\ufe0f Copy Narration</button>';
+                html += '<button class="post-action-btn" onclick="window.appActions.copySlideText(' + i + ')" title="Copy slide text for Manus" style="color:#4dabf7;border-color:rgba(77,171,247,0.3);font-size:0.68rem;padding:0.2rem 0.5rem;">\ud83d\udcca Copy Slide Text</button>';
+                html += '<button class="post-action-btn" onclick="window.appActions.openManus()" title="Open Manus to create slides" style="color:var(--purple);font-size:0.68rem;padding:0.2rem 0.5rem;">\ud83c\udfa8 Open Manus</button>';
+                html += '</div>';
+                html += '</div>';
+                return html;
+            })() : ''}
 
         ${post.dataLayerUsed ? `
         <div class="post-data-layer" style="margin:0.3rem 1rem;padding:0.6rem 0.8rem;background:rgba(201,168,76,0.06);border-left:3px solid #C9A84C;border-radius:var(--r-xs);font-size:0.72rem;">
@@ -710,6 +772,30 @@ window.appActions = {
         } else {
             showToast('No visual prompt found for this post.', 'info');
         }
+    },
+
+    copyNarration(index) {
+        const post = state.posts[index];
+        if (!post || !post.videoScript || !post.videoScript.slides) {
+            showToast('No video narration found for this post.', 'info');
+            return;
+        }
+        const narrationParts = post.videoScript.slides.map(s => s.narration || '').filter(n => n);
+        const fullNarration = narrationParts.join('\n\n');
+        copyToClipboard(fullNarration);
+        showToast('Full narration script copied for ElevenLabs!', 'success');
+    },
+
+    copySlideText(index) {
+        const post = state.posts[index];
+        if (!post || !post.videoScript || !post.videoScript.slides) {
+            showToast('No video slide text found for this post.', 'info');
+            return;
+        }
+        const slideTexts = post.videoScript.slides.map((s, i) => `Slide ${s.slideNumber || i + 1}: ${s.slideText || ''}`);
+        const fullSlideText = slideTexts.join('\n');
+        copyToClipboard(fullSlideText);
+        showToast('Slide text copied for Manus!', 'success');
     },
 
     saveImageUrl(index, btn) {
