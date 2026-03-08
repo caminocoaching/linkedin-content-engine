@@ -62,6 +62,11 @@
   --shadow-glow: 0 0 30px var(--accent-glow);
   --shadow-gold: 0 0 40px rgba(201, 168, 76, 0.15);
 
+  /* Neuro-Teal (Neurochemistry accent) */
+  --neuro-teal: #00BFA5;
+  --neuro-teal-glow: rgba(0, 191, 165, 0.15);
+  --neuro-teal-dim: rgba(0, 191, 165, 0.08);
+
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition: 0.25s ease;
@@ -1667,4 +1672,444 @@ body::before {
 
 .btn-primary:hover::before {
   opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   APPLE-STYLE 2-MODE UI — Hero, Story Cards, Modals
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Nav Right + Settings ──────────────────────────────────── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.nav-settings-btn {
+  border: none !important;
+  padding: 0.35rem 0.6rem !important;
+}
+
+/* ─── Hero Section ──────────────────────────────────────────── */
+.hero-section {
+  text-align: center;
+  padding: 3.5rem 1rem 2rem;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.hero-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.hero-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  font-weight: 400;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+/* ─── Calendar Context (compact) ──────────────────────────── */
+.calendar-context.compact {
+  margin-bottom: 1.5rem;
+}
+
+.calendar-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--r-full);
+  margin: 0.2rem;
+  font-weight: 500;
+}
+
+.calendar-badge.live {
+  background: rgba(232, 68, 68, 0.08);
+  border: 1px solid rgba(232, 68, 68, 0.2);
+  color: #e84444;
+}
+
+.calendar-badge.next {
+  background: rgba(218, 165, 32, 0.06);
+  border: 1px solid rgba(218, 165, 32, 0.15);
+  color: var(--gold);
+}
+
+.days-count {
+  font-weight: 700;
+  color: #e84444;
+  margin-left: 0.35rem;
+}
+
+/* ─── Hero Button ───────────────────────────────────────────── */
+.btn-hero {
+  padding: 0.85rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: var(--r-full);
+  letter-spacing: 0.01em;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hero::before {
+  border-radius: var(--r-full) !important;
+}
+
+.btn-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-full);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
+  pointer-events: none;
+}
+
+/* ═══ Story Cards ═══════════════════════════════════════════ */
+.stories-container,
+.posts-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+}
+
+.stories-header,
+.posts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stories-title,
+.posts-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stories-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.stories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ─── Individual Story Card ─────────────────────────────────── */
+.story-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: all var(--transition);
+  cursor: default;
+}
+
+.story-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.story-card-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  min-width: 130px;
+}
+
+.story-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--r-full);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.story-tag.chemical {
+  font-weight: 700;
+}
+
+.story-tag.post-type {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.story-tag.pillar {
+  font-size: 0.62rem;
+  font-weight: 500;
+  opacity: 0.7;
+  background: none;
+  padding-left: 0;
+}
+
+.story-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.story-headline {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  margin-bottom: 0.2rem;
+}
+
+.story-angle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 0.15rem;
+}
+
+.story-source {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.story-card-actions {
+  flex-shrink: 0;
+}
+
+.story-generate-btn {
+  padding: 0.4rem 0.85rem;
+  background: var(--neuro-teal-dim);
+  border: 1px solid rgba(0, 191, 165, 0.2);
+  border-radius: var(--r-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--neuro-teal);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font);
+  white-space: nowrap;
+}
+
+.story-generate-btn:hover {
+  background: rgba(0, 191, 165, 0.15);
+  border-color: rgba(0, 191, 165, 0.4);
+  transform: translateX(2px);
+}
+
+/* ─── Stories Actions (Write All 7 button) ──────────────────── */
+.stories-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.stories-actions .btn-hero {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* ─── Posts Actions Bar ─────────────────────────────────────── */
+.posts-actions-bar {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.posts-actions-bar .btn {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* ─── Single Post Input ─────────────────────────────────────── */
+.single-input-area {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.single-textarea {
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--r-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font);
+  resize: vertical;
+  transition: border-color var(--transition);
+}
+
+.single-textarea:focus {
+  outline: none;
+  border-color: var(--neuro-teal);
+  box-shadow: 0 0 0 3px var(--neuro-teal-glow);
+}
+
+.single-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.single-input-area .btn-hero {
+  width: 100%;
+}
+
+.single-result-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+}
+
+/* ─── Modal Overlay ─────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* ─── Responsive adjustments for Apple-style layout ──────────── */
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 1.6rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.88rem;
+  }
+
+  .story-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .story-card-tags {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: auto;
+  }
+
+  .story-card-actions {
+    width: 100%;
+  }
+
+  .story-generate-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .posts-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-inner {
+    gap: 0.75rem;
+  }
+
+  .nav-link-text {
+    font-size: 0.75rem;
+  }
+}
+
+/* ─── Animation for content appearing ───────────────────────── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stories-container:not(.hidden),
+.posts-container:not(.hidden),
+.single-result-container:not(.hidden) {
+  animation: slideUp 0.4s ease;
 }

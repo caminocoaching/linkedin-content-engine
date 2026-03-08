@@ -5,26 +5,28 @@
 
 const STORAGE_KEY = 'business-linkedin-engine-settings';
 
-import {
-  isScanDue, getLastScanInfo, getNewReviews, getApprovedPatterns,
-  scanForNewReviews, mineReviewForPatterns, approveReviewPattern,
-  dismissReview, seedKnownReviews
-} from './review-scanner.js';
-
 const DEFAULT_SETTINGS = {
-  openaiApiKey: '',
+  geminiApiKey: '',
+  claudeApiKey: '',
+  heygenApiKey: '',
+  heygenAvatarId: '',
+  heygenVoiceId: '',
+  manusApiKey: '',
+  canvaApiToken: '',
+  canvaPostTemplateId: '',
   ghlToken: '',
   ghlLocationId: '',
+  ghlEmailFrom: '',
   publishMethod: 'csv',
-  aiModel: 'gpt-4o-mini',
   linkedinGroups: [
-    { name: 'CEO & Founder Network', url: '', enabled: true },
-    { name: 'Leadership Performance', url: '', enabled: true },
-    { name: 'Executive Coaching', url: '', enabled: true }
+    { name: 'CEOs & Founders Network', url: '', enabled: true },
+    { name: 'Leadership & Mental Performance', url: '', enabled: true },
+    { name: 'Business Growth & Strategy', url: '', enabled: true }
   ],
   postLength: 'medium',
   brandName: 'Camino Coaching',
-  winningFormulaUrl: ''
+  assessmentUrl: 'https://caminocoaching.co.uk/leader-assessment',
+  blueprintUrl: 'https://academy.caminocoaching.co.uk/executive-flow-blueprint/order/'
 };
 
 // ─── Load Settings ────────────────────────────────────────────
@@ -72,7 +74,7 @@ export function renderSettingsPage() {
   container.innerHTML = `
     <div class="page-header">
       <h1>⚙️ Settings</h1>
-      <p class="page-subtitle">Configure your API keys, Winning Formula assessment link, and publishing preferences</p>
+      <p class="page-subtitle">Configure your API keys, assessment links, and publishing preferences</p>
     </div>
 
     <div class="settings-grid">
@@ -84,42 +86,112 @@ export function renderSettingsPage() {
         </div>
         <div class="settings-card-body">
           <div class="form-group">
-            <label for="openai-key">OpenAI API Key</label>
+            <label for="gemini-key">🔍 Gemini API Key <span style="font-size:0.7rem;color:var(--neuro-teal);">(Research — Google Search Grounding)</span></label>
             <div class="input-with-toggle">
-              <input type="password" id="openai-key" class="form-input" 
-                     value="${settings.openaiApiKey}" 
-                     placeholder="sk-..." />
-              <button class="btn-icon toggle-visibility" data-target="openai-key" title="Show/Hide">
+              <input type="password" id="gemini-key" class="form-input" 
+                     value="${settings.geminiApiKey}" 
+                     placeholder="AIza..." />
+              <button class="btn-icon toggle-visibility" data-target="gemini-key" title="Show/Hide">
                 <span class="eye-icon">👁️</span>
               </button>
             </div>
-            <span class="form-hint">Required for content generation. Get yours at platform.openai.com</span>
+            <span class="form-hint">Searches live Google for fresh articles every week. Get yours at aistudio.google.com</span>
           </div>
 
           <div class="form-group">
-            <label for="ai-model">AI Model</label>
-            <select id="ai-model" class="form-select">
-              <option value="gpt-4o" ${settings.aiModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o (Best Quality — low rate limits)</option>
-              <option value="gpt-4o-mini" ${settings.aiModel === 'gpt-4o-mini' ? 'selected' : ''}>GPT-4o Mini (Recommended — fast & reliable)</option>
-              <option value="gpt-4-turbo" ${settings.aiModel === 'gpt-4-turbo' ? 'selected' : ''}>GPT-4 Turbo</option>
-            </select>
+            <label for="claude-key">✍️ Claude API Key <span style="font-size:0.7rem;color:var(--purple);">(Writing — Craig's Voice)</span></label>
+            <div class="input-with-toggle">
+              <input type="password" id="claude-key" class="form-input" 
+                     value="${settings.claudeApiKey}" 
+                     placeholder="sk-ant-..." />
+              <button class="btn-icon toggle-visibility" data-target="claude-key" title="Show/Hide">
+                <span class="eye-icon">👁️</span>
+              </button>
+            </div>
+            <span class="form-hint">Writes all posts and video scripts in Craig's voice. Get yours at console.anthropic.com</span>
+          </div>
+
+          <div class="form-group">
+            <label for="heygen-key">🎬 HeyGen API Key <span style="font-size:0.7rem;color:var(--gold);">(Video Production — AI Avatar)</span></label>
+            <div class="input-with-toggle">
+              <input type="password" id="heygen-key" class="form-input" 
+                     value="${settings.heygenApiKey}" 
+                     placeholder="Enter HeyGen API key..." />
+              <button class="btn-icon toggle-visibility" data-target="heygen-key" title="Show/Hide">
+                <span class="eye-icon">👁️</span>
+              </button>
+            </div>
+            <span class="form-hint">For automated video generation with your AI avatar. Get yours at app.heygen.com/settings</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div class="form-group">
+              <label for="heygen-avatar">HeyGen Avatar ID</label>
+              <input type="text" id="heygen-avatar" class="form-input"
+                     value="${settings.heygenAvatarId}" placeholder="e.g. josh_lite3_20230714" />
+              <span class="form-hint">Your avatar's ID from HeyGen dashboard</span>
+            </div>
+            <div class="form-group">
+              <label for="heygen-voice">HeyGen Voice ID</label>
+              <input type="text" id="heygen-voice" class="form-input"
+                     value="${settings.heygenVoiceId}" placeholder="e.g. 1bd001e7e50f421d891986aed6e1" />
+              <span class="form-hint">Your voice clone or selected voice ID</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="manus-key">🎨 Manus API Key <span style="font-size:0.7rem;color:var(--purple);">(Slide Deck Generation)</span></label>
+            <div class="input-with-toggle">
+              <input type="password" id="manus-key" class="form-input"
+                     value="${settings.manusApiKey}"
+                     placeholder="Enter Manus API key..." />
+              <button class="btn-icon toggle-visibility" data-target="manus-key" title="Show/Hide">
+                <span class="eye-icon">👁️</span>
+              </button>
+            </div>
+            <span class="form-hint">Auto-generates slide decks from video script briefs. Get yours at manus.im/settings</span>
+          </div>
+
+          <div class="form-group">
+            <label for="canva-token">🖼️ Canva API Token <span style="font-size:0.7rem;color:var(--blue);">(Post Image Autofill)</span></label>
+            <div class="input-with-toggle">
+              <input type="password" id="canva-token" class="form-input"
+                     value="${settings.canvaApiToken}"
+                     placeholder="Enter Canva API token..." />
+              <button class="btn-icon toggle-visibility" data-target="canva-token" title="Show/Hide">
+                <span class="eye-icon">👁️</span>
+              </button>
+            </div>
+            <span class="form-hint">Auto-fills brand templates with post content. Set up at canva.dev</span>
+          </div>
+          <div class="form-group">
+            <label for="canva-template">Canva Post Template ID</label>
+            <input type="text" id="canva-template" class="form-input"
+                   value="${settings.canvaPostTemplateId}" placeholder="DAGx..." />
+            <span class="form-hint">ID of your Canva brand template for post images (found in Canva template URL)</span>
           </div>
         </div>
       </div>
 
-      <!-- Winning Formula Assessment -->
+      <!-- Lead Magnet / Assessment Links -->
       <div class="settings-card">
         <div class="settings-card-header">
           <span class="settings-icon">🎯</span>
-          <h2>Winning Formula Assessment</h2>
+          <h2>Assessment & Funnel URLs</h2>
         </div>
         <div class="settings-card-body">
           <div class="form-group">
-            <label for="winning-formula-url">Assessment URL (ScoreApp)</label>
-            <input type="text" id="winning-formula-url" class="form-input"
-                   value="${settings.winningFormulaUrl}"
-                   placeholder="https://your-scoreapp-url.com" />
-            <span class="form-hint">The link to your Winning Formula leadership assessment. This will replace [LINK] in CTAs.</span>
+            <label for="assessment-url">🏆 Winning Formula Assessment (PRIMARY CTA)</label>
+            <input type="text" id="assessment-url" class="form-input"
+                   value="${settings.assessmentUrl}"
+                   placeholder="https://caminocoaching.co.uk/leader-assessment" />
+            <span class="form-hint">✅ ScoreApp assessment — 25 questions, 3 minutes, instant report — Used in all CTAs</span>
+          </div>
+          <div class="form-group">
+            <label for="blueprint-url">📘 Executive Flow Blueprint (Free Training)</label>
+            <input type="text" id="blueprint-url" class="form-input"
+                   value="${settings.blueprintUrl}"
+                   placeholder="https://academy.caminocoaching.co.uk/executive-flow-blueprint/order/" />
+            <span class="form-hint">3-day free training — Opens 3x/year (Jan, May, Sep) — Bridge from assessment to strategy call</span>
           </div>
         </div>
       </div>
@@ -132,23 +204,33 @@ export function renderSettingsPage() {
         </div>
         <div class="settings-card-body">
           <div class="form-group">
-            <label for="ghl-token">GHL Private Integration Token</label>
+            <label for="ghl-token">🔑 GHL Private Integration Token <span style="font-size:0.7rem;color:var(--green);">(API v2 — Bearer Auth)</span></label>
             <div class="input-with-toggle">
               <input type="password" id="ghl-token" class="form-input"
                      value="${settings.ghlToken}"
-                     placeholder="Enter your GHL token..." />
+                     placeholder="Enter your GHL Private Integration token..." />
               <button class="btn-icon toggle-visibility" data-target="ghl-token" title="Show/Hide">
                 <span class="eye-icon">👁️</span>
               </button>
             </div>
-            <span class="form-hint">Optional — needed for direct GHL API scheduling</span>
+            <span class="form-hint">Required for direct email dispatch. Agency Settings → Private Integrations → ensure conversations/message.write + contacts.write scopes</span>
           </div>
 
-          <div class="form-group">
-            <label for="ghl-location">GHL Location ID</label>
-            <input type="text" id="ghl-location" class="form-input"
-                   value="${settings.ghlLocationId}"
-                   placeholder="Enter your location ID..." />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div class="form-group">
+              <label for="ghl-location">Location ID</label>
+              <input type="text" id="ghl-location" class="form-input"
+                     value="${settings.ghlLocationId}"
+                     placeholder="e.g. vdgR8teGuIgHPMPzbQkK" />
+              <span class="form-hint">Sub-account ID for contact upsert</span>
+            </div>
+            <div class="form-group">
+              <label for="ghl-email-from">Verified Sender Email</label>
+              <input type="email" id="ghl-email-from" class="form-input"
+                     value="${settings.ghlEmailFrom}"
+                     placeholder="e.g. craig@caminocoaching.co.uk" />
+              <span class="form-hint">Must be from your LC Email dedicated domain</span>
+            </div>
           </div>
 
           <div class="form-group">
@@ -193,7 +275,7 @@ export function renderSettingsPage() {
                 <input type="text" class="form-input group-name" value="${group.name}" 
                        placeholder="Group name" data-index="${i}" />
                 <input type="text" class="form-input group-url" value="${group.url}" 
-                       placeholder="LinkedIn group URL" data-index="${i}" />
+                       placeholder="Group URL" data-index="${i}" />
                 <button class="btn-icon btn-danger remove-group" data-index="${i}" title="Remove">✕</button>
               </div>
             `).join('')}
@@ -217,32 +299,11 @@ export function renderSettingsPage() {
           <div class="form-group">
             <label for="post-length">Default Post Length</label>
             <select id="post-length" class="form-select">
-              <option value="short" ${settings.postLength === 'short' ? 'selected' : ''}>Short (150-200 words)</option>
+              <option value="short" ${settings.postLength === 'short' ? 'selected' : ''}>Short (100-200 words)</option>
               <option value="medium" ${settings.postLength === 'medium' ? 'selected' : ''}>Medium (200-350 words)</option>
               <option value="long" ${settings.postLength === 'long' ? 'selected' : ''}>Long (350-500 words)</option>
             </select>
           </div>
-        </div>
-      </div>
-
-      <!-- Review Scanner -->
-      <div class="settings-card full-width">
-        <div class="settings-card-header">
-          <span class="settings-icon">⭐</span>
-          <h2>Review Scanner</h2>
-          <span id="review-scan-badge" class="badge" style="margin-left:auto;"></span>
-        </div>
-        <div class="settings-card-body">
-          <div id="review-scanner-status" style="margin-bottom:0.8rem;"></div>
-          <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;">
-            <button class="btn btn-secondary" id="scan-reviews-btn" style="min-width:160px;">
-              <span class="btn-icon-left">🔍</span> Scan Trustpilot
-            </button>
-            <a href="https://uk.trustpilot.com/review/caminocoaching.co.uk" target="_blank" 
-               style="font-size:0.75rem;color:var(--blue);text-decoration:none;">View on Trustpilot ↗</a>
-          </div>
-          <div id="new-reviews-container" style="margin-top:1rem;"></div>
-          <div id="approved-patterns-container" style="margin-top:1rem;"></div>
         </div>
       </div>
     </div>
@@ -255,153 +316,7 @@ export function renderSettingsPage() {
     </div>
   `;
 
-  // Seed known reviews on first load
-  seedKnownReviews();
-
   attachSettingsListeners(settings);
-  renderReviewScanner();
-}
-
-// ─── Review Scanner UI ───────────────────────────────────────
-function renderReviewScanner() {
-  const scanInfo = getLastScanInfo();
-  const newReviews = getNewReviews();
-  const approved = getApprovedPatterns();
-  const statusEl = document.getElementById('review-scanner-status');
-  const badgeEl = document.getElementById('review-scan-badge');
-  const newContainer = document.getElementById('new-reviews-container');
-  const approvedContainer = document.getElementById('approved-patterns-container');
-
-  if (!statusEl) return;
-
-  // Status line
-  if (scanInfo.lastScanDate) {
-    const lastDate = new Date(scanInfo.lastScanDate);
-    const daysSince = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24));
-    const dueClass = scanInfo.isDue ? 'color:var(--accent);font-weight:600;' : 'color:var(--green);';
-    statusEl.innerHTML = `
-            <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;font-size:0.8rem;">
-                <span style="color:var(--text-secondary);">Last scan: <strong>${lastDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
-                <span style="${dueClass}">${scanInfo.isDue ? '⚠️ Scan overdue' : `✅ ${daysSince}d ago`}</span>
-                <span style="color:var(--text-muted);">📝 ${scanInfo.totalReviews} total reviews on Trustpilot</span>
-            </div>
-        `;
-  } else {
-    statusEl.innerHTML = `<span style="font-size:0.8rem;color:var(--text-muted);">No scans yet — click Scan Trustpilot to check for reviews</span>`;
-  }
-
-  // Badge
-  if (newReviews.length > 0) {
-    badgeEl.textContent = `${newReviews.length} new`;
-    badgeEl.style.cssText = 'margin-left:auto;background:rgba(255,107,53,0.15);color:#ff6b35;padding:0.15rem 0.5rem;border-radius:999px;font-size:0.7rem;font-weight:600;';
-  } else if (scanInfo.isDue) {
-    badgeEl.textContent = 'Scan due';
-    badgeEl.style.cssText = 'margin-left:auto;background:rgba(255,68,68,0.1);color:var(--accent);padding:0.15rem 0.5rem;border-radius:999px;font-size:0.7rem;';
-  } else {
-    badgeEl.textContent = 'Up to date';
-    badgeEl.style.cssText = 'margin-left:auto;background:rgba(16,185,129,0.1);color:var(--green);padding:0.15rem 0.5rem;border-radius:999px;font-size:0.7rem;';
-  }
-
-  // New reviews
-  if (newReviews.length > 0) {
-    newContainer.innerHTML = `
-            <div style="font-size:0.78rem;font-weight:600;color:var(--text-primary);margin-bottom:0.5rem;">🆕 New Reviews Found (${newReviews.length})</div>
-            ${newReviews.map((review, i) => `
-                <div class="new-review-card" data-index="${i}" style="padding:0.6rem 0.8rem;margin-bottom:0.5rem;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.15);border-radius:var(--r-sm);font-size:0.75rem;">
-                    <div style="display:flex;justify-content:space-between;align-items:start;gap:0.5rem;">
-                        <div style="flex:1;">
-                            <strong style="color:var(--text-primary);">${escapeHtml(review.reviewTitle || '')}</strong>
-                            <span style="color:var(--text-muted);margin-left:0.4rem;">— ${escapeHtml(review.reviewerName || '')} (${review.country || ''})</span>
-                            <div style="color:var(--text-secondary);margin-top:0.3rem;line-height:1.4;">${escapeHtml((review.reviewText || '').substring(0, 200))}${(review.reviewText || '').length > 200 ? '...' : ''}</div>
-                        </div>
-                        <div style="display:flex;gap:0.3rem;flex-shrink:0;">
-                            <button class="btn btn-sm btn-secondary mine-review-btn" data-index="${i}" style="font-size:0.65rem;padding:0.2rem 0.5rem;">🔬 Mine Pattern</button>
-                            <button class="btn btn-sm dismiss-review-btn" data-index="${i}" style="font-size:0.65rem;padding:0.2rem 0.4rem;background:transparent;color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);">✕</button>
-                        </div>
-                    </div>
-                    <div class="mined-pattern-result" id="mined-result-${i}" style="display:none;margin-top:0.5rem;padding:0.5rem;background:rgba(105,219,124,0.06);border:1px solid rgba(105,219,124,0.15);border-radius:var(--r-xs);"></div>
-                </div>
-            `).join('')}
-        `;
-
-    // Attach mine/dismiss handlers
-    newContainer.querySelectorAll('.mine-review-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleMineReview(parseInt(btn.dataset.index)));
-    });
-    newContainer.querySelectorAll('.dismiss-review-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        dismissReview(parseInt(btn.dataset.index));
-        renderReviewScanner();
-        showToast('Review dismissed', 'info');
-      });
-    });
-  } else {
-    newContainer.innerHTML = '';
-  }
-
-  // Approved patterns
-  if (approved.length > 0) {
-    approvedContainer.innerHTML = `
-            <div style="font-size:0.78rem;font-weight:600;color:var(--green);margin-bottom:0.4rem;">✅ Approved Language Patterns (${approved.length})</div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
-                ${approved.map(p => `<span style="padding:0.15rem 0.5rem;background:rgba(105,219,124,0.08);color:var(--green);border-radius:999px;font-size:0.68rem;font-weight:500;">${escapeHtml(p.pattern)}</span>`).join('')}
-            </div>
-        `;
-  } else {
-    approvedContainer.innerHTML = '';
-  }
-}
-
-async function handleMineReview(index) {
-  const settings = loadSettings();
-  if (!settings.openaiApiKey) {
-    showToast('Add your OpenAI API key first.', 'error');
-    return;
-  }
-
-  const reviews = getNewReviews();
-  const review = reviews[index];
-  if (!review) return;
-
-  const resultEl = document.getElementById(`mined-result-${index}`);
-  const btn = document.querySelector(`.mine-review-btn[data-index="${index}"]`);
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Mining...'; }
-  if (resultEl) { resultEl.style.display = 'block'; resultEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.72rem;">🔬 AI is analysing this review for language patterns...</span>'; }
-
-  try {
-    const pattern = await mineReviewForPatterns(review, settings.openaiApiKey);
-
-    if (resultEl) {
-      resultEl.innerHTML = `
-                <div style="font-size:0.72rem;">
-                    <div style="margin-bottom:0.3rem;"><strong style="color:var(--green);">Pattern:</strong> <span style="color:var(--text-primary);font-weight:600;">${escapeHtml(pattern.pattern)}</span></div>
-                    <div style="margin-bottom:0.3rem;"><strong style="color:var(--blue);">Client phrase:</strong> <span style="color:var(--text-secondary);">"${escapeHtml(pattern.clientPhrase)}"</span></div>
-                    <div style="margin-bottom:0.3rem;"><strong style="color:#ff6b35;">Business mirror:</strong> <span style="color:var(--text-secondary);">"${escapeHtml(pattern.businessMirror)}"</span></div>
-                    ${pattern.caseStudySetup ? `<div style="margin-bottom:0.3rem;"><strong style="color:var(--purple);">📖 Case study:</strong> <span style="color:var(--text-muted);">${escapeHtml(pattern.caseStudySetup)}</span></div>` : ''}
-                    <div style="display:flex;gap:0.4rem;margin-top:0.4rem;">
-                        <button class="btn btn-sm approve-pattern-btn" data-index="${index}" style="font-size:0.65rem;padding:0.2rem 0.6rem;background:var(--green);color:#000;font-weight:600;">✅ Approve</button>
-                        <button class="btn btn-sm skip-pattern-btn" data-index="${index}" style="font-size:0.65rem;padding:0.2rem 0.5rem;background:transparent;color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);">Skip</button>
-                    </div>
-                </div>
-            `;
-
-      // Store the pattern temporarily on the button for approval
-      resultEl.querySelector('.approve-pattern-btn')?.addEventListener('click', () => {
-        approveReviewPattern(index, pattern);
-        renderReviewScanner();
-        showToast(`"${pattern.pattern}" added to language bank!`, 'success');
-      });
-      resultEl.querySelector('.skip-pattern-btn')?.addEventListener('click', () => {
-        resultEl.style.display = 'none';
-        if (btn) { btn.disabled = false; btn.textContent = '🔬 Mine Pattern'; }
-      });
-    }
-  } catch (err) {
-    if (resultEl) {
-      resultEl.innerHTML = `<span style="color:var(--accent);font-size:0.72rem;">❌ ${escapeHtml(err.message)}</span>`;
-    }
-    if (btn) { btn.disabled = false; btn.textContent = '🔬 Mine Pattern'; }
-  }
 }
 
 // ─── Attach Settings Event Listeners ─────────────────────────
@@ -414,32 +329,6 @@ function attachSettingsListeners(settings) {
       status.classList.add('visible');
       setTimeout(() => status.classList.remove('visible'), 2000);
       showToast('Settings saved successfully', 'success');
-    }
-  });
-
-  // Review Scanner
-  document.getElementById('scan-reviews-btn')?.addEventListener('click', async () => {
-    const settings = loadSettings();
-    if (!settings.openaiApiKey) {
-      showToast('Add your OpenAI API key first.', 'error');
-      return;
-    }
-    const btn = document.getElementById('scan-reviews-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:0.4rem;"></span> Scanning...';
-    try {
-      const result = await scanForNewReviews(settings.openaiApiKey);
-      renderReviewScanner();
-      if (result.newFound > 0) {
-        showToast(`Found ${result.newFound} new review${result.newFound > 1 ? 's' : ''}! Mine them for language patterns.`, 'success');
-      } else {
-        showToast(`Scan complete. ${result.totalScanned} reviews checked, no new ones found.`, 'info');
-      }
-    } catch (err) {
-      showToast(`Scan failed: ${err.message}`, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<span class="btn-icon-left">🔍</span> Scan Trustpilot';
     }
   });
 
@@ -473,7 +362,7 @@ function attachSettingsListeners(settings) {
         <input type="text" class="form-input group-name" value="" 
                placeholder="Group name" data-index="${index}" />
         <input type="text" class="form-input group-url" value="" 
-               placeholder="LinkedIn group URL" data-index="${index}" />
+               placeholder="Group URL" data-index="${index}" />
         <button class="btn-icon btn-danger remove-group" data-index="${index}" title="Remove">✕</button>
       </div>
     `;
@@ -503,15 +392,23 @@ function gatherSettingsFromForm() {
   });
 
   return {
-    openaiApiKey: document.getElementById('openai-key')?.value || '',
+    geminiApiKey: document.getElementById('gemini-key')?.value || '',
+    claudeApiKey: document.getElementById('claude-key')?.value || '',
+    heygenApiKey: document.getElementById('heygen-key')?.value || '',
+    heygenAvatarId: document.getElementById('heygen-avatar')?.value || '',
+    heygenVoiceId: document.getElementById('heygen-voice')?.value || '',
+    manusApiKey: document.getElementById('manus-key')?.value || '',
+    canvaApiToken: document.getElementById('canva-token')?.value || '',
+    canvaPostTemplateId: document.getElementById('canva-template')?.value || '',
     ghlToken: document.getElementById('ghl-token')?.value || '',
     ghlLocationId: document.getElementById('ghl-location')?.value || '',
+    ghlEmailFrom: document.getElementById('ghl-email-from')?.value || '',
     publishMethod: document.querySelector('input[name="publish-method"]:checked')?.value || 'csv',
-    aiModel: document.getElementById('ai-model')?.value || 'gpt-4o-mini',
     linkedinGroups: groups,
     brandName: document.getElementById('brand-name')?.value || 'Camino Coaching',
     postLength: document.getElementById('post-length')?.value || 'medium',
-    winningFormulaUrl: document.getElementById('winning-formula-url')?.value || ''
+    assessmentUrl: document.getElementById('assessment-url')?.value || '',
+    blueprintUrl: document.getElementById('blueprint-url')?.value || ''
   };
 }
 
@@ -519,11 +416,4 @@ function gatherSettingsFromForm() {
 function showToast(message, type = 'info') {
   const event = new CustomEvent('show-toast', { detail: { message, type } });
   document.dispatchEvent(event);
-}
-
-// ─── Escape HTML Helper ──────────────────────────────────────
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }

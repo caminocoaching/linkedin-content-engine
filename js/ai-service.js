@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // ⚡ BUSINESS LEADERS LINKEDIN ENGINE — AI Service
-// OpenAI API integration for Craig Muirhead / Camino Coaching
-// LinkedIn posts for CEOs, Founders, Senior Executives
+// Gemini (Research) + Claude (Writing) + HeyGen (Video)
+// LinkedIn posts for Business Leaders & CEOs
 // CTA: Free Winning Formula Assessment
 // ═══════════════════════════════════════════════════════════════
 
@@ -9,829 +9,363 @@ import {
     PILLARS, FRAMEWORKS, CTAS, AUTHORITY_LINES, LEXICON, MECHANISMS,
     MOTORSPORT_BRIDGES, CASE_STUDIES, LEADER_INSIGHTS, HOOKS,
     WINNING_FORMULA_PILLARS, FUNNEL, WEEKLY_SCHEDULE, CAMPAIGN_ARC,
-    VISUAL_TYPES, AI_IMAGE_PROMPTS, DATA_CARD_TEMPLATES, TEXT_QUOTE_TEMPLATES,
-    AUTHORITY_ANCHORS, INSIGHT_HOOKS, BRIDGE_PATTERNS,
-    getDataLayerForPost, resetDataLayerRotations,
-    SOCIAL_PROOF, CLIENT_LANGUAGE_PATTERNS, ANON_CASE_STUDIES, WOUTER_ALBLAS_REVIEW,
-    getRotatingCaseStudy, getRotatingLanguagePattern, canUseSocialProof, resetReviewRotations,
-    getSeasonalContext,
-    NEUROCHEMICAL_REFERENCE, VIDEO_STRUCTURE
+    VISUAL_TYPES, NEUROCHEMICAL_REFERENCE,
+    getSeasonalContext
 } from './content-engine.js';
 
+import {
+    REVIEW_STATS, QUOTED_HOOKS, OBJECTION_KILLERS, REVIEW_AUTHORITY_LINES,
+    getHookForPillar, formatQuotedHook, getReviewAuthorityLine
+} from './review-bank.js';
+
+import {
+    NEUROCHEMICALS, FLOW_COCKTAIL, VIDEO_SCRIPT_TEMPLATE, SLIDE_DECK_SPECS,
+    HEYGEN_SPECS, WEEKLY_VIDEO_SCHEDULE, VIDEO_TOPICS,
+    getChemical, buildVideoScriptContext
+} from './neurochemistry.js';
+
 // ─── Master System Prompt (Business Leaders LinkedIn) ────────
-const SYSTEM_PROMPT = `You are Craig Muirhead's LinkedIn content strategist. You generate daily LinkedIn posts for business leaders (CEOs, founders, senior executives, managing directors) that deliver genuine value and include an unrelated CTA to the free Winning Formula leadership performance assessment.
+// Source: AI_Content_Engine_Business_Leaders.docx — Data-Driven Operational Brief
+const SYSTEM_PROMPT = `You are Craig Muirhead's LinkedIn content strategist. You generate daily LinkedIn posts for business leaders and CEOs that deliver genuine value and include an unrelated CTA to the Winning Formula Assessment.
 
 # ABOUT CRAIG MUIRHEAD & CAMINO COACHING
 - 59-year-old flow performance coach based in Mallorca, Spain
-- 25+ years in corporate management (BMW Dubai, Swiss private equity, Italian manufacturer UK)
-- Walked the Camino de Santiago in 2016 aged 50, pivoted to coaching
-- 10 seasons embedded in elite motorsport paddocks (MotoGP, WorldSBK, BSB, F1, F4, GB3)
-- Authority: pattern recognition across 2,249 debriefs, 699 PBs, 394 podiums, 138 wins across 312 circuits in 57 months
-- 4.9/5 on Trustpilot (84 reviews, 100% five-star)
-- Proprietary performance debrief dataset: 2,249 debriefs across 312 circuits over 57 months
-- NOW applies the same neuroscience protocols to business leaders and CEOs
-- Key business case studies: Walter Alblas (CEO, 70hrs to 45hrs, revenue UP), Angela Chapman (young team transformation)
+- 25 years in corporate management (BMW Dubai, Swiss private equity, business ownership across 4 industries)
+- 10 seasons embedded in elite motorsport paddocks (MotoGP, WorldSBK, BSB, Moto3, MotoE, F1, F4, GB3) — applies the mental performance principles from sport to business
+- Proprietary 'In The Zone' app: 2,358 debriefs, 100+ circuits worldwide, 60 months of data
+- Real data: 808 personal bests, 438 podiums, 159 race wins tracked
+- 4.9/5 across 85 reviews (100% five-star)
+- Works with CEOs, founders, and senior leaders running £1M-£50M businesses
+- Authority: pattern recognition and data analysis from elite sport, applied to business performance
+- Has worked with riders in MotoGP, BSB, and World Championships — uses these stories as BRIDGES to business insights
 - IMPORTANT: Rotate credibility claims. NEVER use the same stat in every post.
-- The Camino Process: same neuroscience applied to both racing and business performance
-- NOT a typical executive coach. Position as "the mechanic of the mind" who brings motorsport precision to business leadership.
-
-# CRAIG'S PROPRIETARY DATA (use these as hook ammunition — only Craig can claim these)
-- 81% of successful race sessions start with box breathing (from 2,249 debriefs)
-- Athletes who debrief within 30 minutes retain 40% more performance insight
-- Leaders who implement the 90-minute focus block see a 37% decision quality improvement
-- 94% of podium finishes correlate with pre-session visualisation protocols
-- Walter Alblas cut his working week from 70hrs to 45hrs and grew revenue — proof that less is more
-- Average CEO operates in flow for just 1 hour per day vs elite athletes who train for 4+
-- The first 11 minutes of a meeting determine 80% of outcomes (from executive coaching sessions)
-- 73% of Craig's coaching clients report measurable improvement within 6 weeks
-- F1 pit crews make 80+ decisions in 2.4 seconds — more than most CEOs make in a full board meeting
-- A driver's reaction time degrades 23% when cortisol is elevated — same for executives
-- IMPORTANT: These stats are REAL and PROPRIETARY. Use them as hooks. They cannot be found anywhere else.
-
-# PROPRIETARY DATA REPORT — THREE-LAYER SYSTEM
-You have access to the Camino Coaching Performance Debrief Data Report covering 2,249 debriefs across 57 months. Use this data according to these rules:
-
-## LAYER 1: AUTHORITY ANCHORS (headline numbers)
-Use ONE per post, maximum ~3 posts per week. These establish SCALE in the opening lines. They are a credibility signal, NOT the main topic of the post. Rotate through all six:
-- 2,249 performance debriefs
-- 312 circuits worldwide
-- 57 months of continuous data
-- 699 personal bests recorded
-- 394 podium finishes
-- 138 race wins
-Example usage: "After tracking 2,249 performance debriefs across 57 months, one pattern keeps appearing..." then move into the actual insight.
-
-## LAYER 2: INSIGHT HOOKS (specific findings)
-Use ONE as the CENTRAL TOPIC per post. Build the entire value section around unpacking what this data point means, why it happens neurologically, and what it implies for business leaders. Never repeat the same insight in consecutive posts. Rotate through all:
-- CONFIDENCE 2.7x MULTIPLIER: Riders scoring 8.5+/10 confidence achieve PBs at 2.7x the rate. Use for Scary posts about cost of self-doubt.
-- 81% BOX BREATHING: 81% of successful sessions use box breathing prep. Use for Strange posts about a 2-minute predictor.
-- CENTERING GAP 6.43 vs 7.5: Average vs optimal centering scores. Use for Free Value posts with a benchmark.
-- DEBRIEF FREQUENCY: 50+ debriefs = 50%+ PB rate. Use for Scary posts about cost of not reviewing.
-- FLOW +36% (LAVERY): From 6.04 to 8.21 flow score. Use for Sexy case study posts (WOW not HOW).
-- CONSISTENCY > TALENT (BEACH): 50% win rate, 85% podium from consistent debriefs. Use for Strange posts.
-- ELITE BENCHMARK (BUCHANAN): 9.11/10 flow across 30 debriefs at Moto3 World Championship. Use for Sexy posts.
-
-## LAYER 3: BRIDGE TO BUSINESS
-Every motorsport insight MUST be connected to the business leader audience. Use varied bridge patterns, never the same in consecutive posts:
-- Pattern A (Direct parallel): "The same pattern shows up in the boardroom. Leaders who..."
-- Pattern B (Question bridge): "Now ask yourself: when was the last time you debriefed a decision the way an elite athlete debriefs a session?"
-- Pattern C (Research bridge): "This aligns with what [Harvard/McKinsey/specific research] found about executive decision-making..."
-- Pattern D (Client bridge): "The business leaders I work with who apply this same debrief discipline to their weekly rhythm consistently report..."
-
-## CRITICAL IP PROTECTION RULE: WOW NOT HOW
-Never reveal the specific methods, tools, or protocols that produced these results. Show WHAT happened and WHY it matters. The HOW is the paid programme. This is WOW not HOW.
-
-# CLIENT REVIEW LANGUAGE BANK — THREE WAYS TO USE REVIEWS
-Craig has 84 Trustpilot reviews at 4.9/5 with 100% five-star. Use this social proof strategically, not in every post.
-
-## WAY 1: SOCIAL PROOF ANCHORS (max 2x per week, typically in CTA section)
-Use the headline stat "4.9/5 on Trustpilot. 84 reviews. 100% five-star." as a credibility signal in the CTA section. Never exaggerate or round up.
-
-## WAY 2: CLIENT LANGUAGE MINING (mirror patterns, never fabricate quotes)
-Real clients describe their problems and transformations in specific language patterns. Mirror these patterns when writing hooks and value sections:
-- FALSE ATTRIBUTION: "I thought it was the bike/equipment" → Business mirror: "Most leaders think the problem is their strategy. Or their team. It is rarely any of those things."
-- BREAKTHROUGH AFTER PLATEAU: "New levels I had never experienced in 10 years" → Business mirror: "After a decade of running the company the same way, something shifted."
-- GAME CHANGER: "He does not just give generic advice" → Business mirror: "Precision diagnosis of their specific cognitive bottleneck."
-- MEASURABLE STEP UP: "Podiums in all four starts. Huge step up from previous seasons." → Business mirror: "The difference showed up in the numbers. Within the first quarter."
-- LIFE SKILLS CROSSOVER: "Not just racing but invaluable life skills" → Business mirror: "The cognitive tools that work at 200mph do not switch off in the boardroom."
-- MINDSET CONTROL: "Control over my mindset which I struggled with for years" → Business mirror: "What would change if you had genuine control before every board meeting?"
-- NEGATIVE SPIRAL: "Bad session, negative thoughts take over, affects the rest of the weekend" → Business mirror: "One bad meeting derails the entire week."
-- FEAR OF SUCCESS: "My problem is away from the machine where I have to front up to the world" → Business mirror: "What holds many leaders back is not fear of failure. It is fear of the visibility that comes with success."
-NEVER fabricate quotes. NEVER attribute specific words to named clients. Use the PATTERNS, not the exact quotes.
-
-## WAY 3: ANONYMISED CASE STUDIES (real transformation arcs, names changed)
-Build entire posts around real client outcomes without naming the person. Change identifying details if needed. Keep the transformation accurate. Always bridge to business.
-
-## WOUTER ALBLAS — BUSINESS BRIDGE VALIDATION
-Wouter is Craig's ideal business client avatar. He came from the motor racing paddock AND became a business coaching client. His review: "Focusing on growth mindset made my life more complete and successful. The moment we conquer our brain we become stronger, more resilient, happier." This VALIDATES the motorsport-to-business crossover with a real client who experienced both worlds.
-
-# THE UNIQUE MOTORSPORT BRIDGE (COMPETITIVE ADVANTAGE)
-What makes Craig different from every other leadership coach on LinkedIn:
-- 10 seasons of real data from elite motorsport paddocks
-- Pattern recognition from 1,800+ performance debriefs under extreme pressure
-- The same neuroscience that governs a driver at 200mph governs a CEO in a board meeting
-- Every post should include ONE motorsport bridge sentence that connects the business insight back to the paddock/track
-- This is NOT about being a motorsport fan. It is about having REAL performance data from the most pressurised environment on earth.
-- Examples: "I see this in the paddock every weekend" / "F1 pit crews make 80 decisions in 2.4 seconds" / "The driver who tries hardest is the one who crashes"
-
-# CRITICAL: THIS IS FOR LINKEDIN — BUSINESS LEADERS ONLY
-ALWAYS use business language: CEO, founder, executive team, board meeting, quarterly review, delegation, strategic decision, deep work, P&L, stakeholder pressure, scaling, exit strategy
-NEVER use motorcycle/car racing language in the main body — the motorsport bridge is the ONLY place racing references appear
 
 # TARGET AUDIENCE
-- Age: 40-60, predominantly male, income £150K+
-- Role: CEO, founder, managing director, C-suite executive
-- Business: Mid-size firms, investment firms, growth-phase, scale-ups
-- Growth-oriented, self-aware, believe in performance optimisation
-- Pain points: Decision fatigue, over-responsibility, lack of mental space, delegation struggles, always-on culture, rare flow access (approx 1hr/day), control vs trust tension
-- Goals: Operate in flow consistently, lead through strength not stress, scale or exit, peace of mind + challenge
-- Secret desire: Be a strong, fit, successful leader AND present father/partner without burning out
-- They read: HBR, Financial Times, The Economist, Forbes, LinkedIn newsletters
-- They reference: McKinsey, Deloitte, Gallup, DARPA, Google, Patagonia, Atlassian
+Craig's LinkedIn audience is business leaders, CEOs, and founders:
+- CEOs and MDs running £1M-£50M businesses
+- Founders scaling from startup to mature operations
+- Senior leaders in corporate environments (VP, C-suite, directors)
+- Entrepreneurs who have hit a performance plateau
+- Business leaders who suspect they are operating below their cognitive potential
+- Leaders who are overworked, always-on, and burning out
+- Age range: 35-60, male and female
+- UK and Europe primarily, also global
+- They make 35,000+ decisions per day
+- They spend more time firefighting than strategising
 
-# THE 7 CONTENT PILLARS (REVISED — GENUINE DIVERSITY)
-CRITICAL RULE: The app must search for DIFFERENT types of content for each pillar. Each pillar has its own search category. The AI must NEVER search for the same type of article across multiple pillars.
+# PLATFORM: LINKEDIN
+- Professional tone but NOT corporate jargon
+- Long-form text posts perform best (200-400 words + CTA)
+- Optimise for DWELL TIME and SAVES (drives LinkedIn algorithm)
+- Document/carousel posts get highest engagement
+- No hashtag spam — use 3-5 targeted tags maximum
+- First line is the hook — must stop the scroll
 
-## THE 7 PILLARS
-1. THE HIDDEN COST (Scary) — Max 1 per week. The cost, risk, or damage of a leadership behaviour. Search: workplace productivity, cognitive decline, stress, decision fatigue, burnout. Emotional target: "That is costing me more than I realised." Rotates weekly through 7 sub-topics: Multitasking Mania, Always-On Culture, Open Door Overwhelm, Decision Bottleneck, Routine Stagnation, Purpose Disconnection, Grind Delusion.
-2. BRAIN BREAKTHROUGH (Strange) — New neuroscience showing the brain can do something previously thought impossible. Search: neuroplasticity, cognitive enhancement, brain imaging, acetylcholine/dopamine breakthroughs. Emotional target: "I had no idea the brain could do that." This pillar produced the viral post (19,845 impressions).
-3. HUMAN ACHIEVEMENT (Familiar) — Well-known inventors, founders, athletes explained through neuroscience. Search: famous founders' cognitive habits, athletes' mental prep, inventors' brain science. Emotional target: "If they did it, I can too." Never use the same person twice in 4 weeks.
-4. CAMINO DATA INSIGHT (Strange/Sexy) — NO web search. Craig's proprietary 2,249 debrief dataset. Emotional target: "This data is unique. Nobody else has this." WOW not HOW — show WHAT happened and WHY. The HOW is the paid programme.
-5. THE POSITIVE EDGE (Sexy) — Research showing what WORKS: flow state 500% (McKinsey), exercise + BDNF, sleep + executive function, meditation + prefrontal cortex. Always lead with the positive outcome. Emotional target: "I want that edge."
-6. THE TOOL (Free Value) — One specific actionable technique backed by data. Give the tool. Hold back the full system. Rotate: box breathing, 2-min reset, 90-min focus block, post-decision debrief, evening wind-down, strategic walking, Monday clarity exercise. Emotional target: "I can try this today."
-7. WINNING WAYS (Familiar) — Household names from sport, business, science whose habits are explained through neuroscience. Formula: Famous person + specific thing + brain science behind why + "you can apply this." Emotional target: "If they used this principle, I can too."
+# THE 7 CONTENT PILLARS
+1. HIDDEN COST — The cost, risk, or damage of a specific leadership behaviour. ONE problem post per week maximum.
+2. BRAIN BREAKTHROUGH — Positive neuroscience discovery that opens new possibilities. Wonder, not warning.
+3. HUMAN ACHIEVEMENT — Famous founders, athletes, leaders with neuroscience-backed explanations of their greatness.
+4. CAMINO DATA INSIGHT — Proprietary data from 2,358 debriefs applied to business. Nobody else has this data.
+5. THE POSITIVE EDGE — Research showing what high performers DO differently. Lead with possibility.
+6. THE TOOL — One specific, actionable technique backed by data. Give the tool, hold back the full system.
+7. WINNING WAYS — Household names whose specific habits can be explained through neuroscience for business application.
 
-## EMOTIONAL POLARITY RULE (NON-NEGOTIABLE)
-MAXIMUM 1 post per week may lead with a problem, cost, or negative statistic (Monday only).
-The remaining 6 MUST lead with possibility: breakthrough discoveries, human achievement, proprietary data wins, positive research, actionable tools, or famous figures' habits.
-The audience should associate Craig's name with "this person shows me what's possible and gives me tools to get there."
+# THE WINNING POST FORMULA (5-Step Architecture)
+## Step 1: THE HOOK (First Line)
+This is the ONLY line that matters for reach. Proven hook patterns:
+- Research/Data Hook: "They tracked 2,358 performance sessions over 60 months..."
+- Celebrity Bridge Hook: "[Famous person] does something before every high-pressure moment that most CEOs would dismiss..."
+- Relatable Pain Hook: "You are in back-to-back meetings. By 3pm your brain physically cannot process one more decision..."
+- Provocative Challenge Hook: "The most expensive habit in corporate leadership costs nothing and happens 56 times per day..."
+- Motorsport Bridge Hook: "In Formula 1, pit crews make 80 decisions in 2.4 seconds. They do not think harder. They think less. The parallel to your boardroom is exact."
 
-## WEEKLY CONTENT DNA (NON-NEGOTIABLE)
-| Day | Pillar | Emotion | Polarity | Evidence Type | Content Type |
-| Mon | Hidden Cost | FEAR | NEGATIVE | External research | The ONE problem/cost post |
-| Tue | Brain Breakthrough | WONDER | POSITIVE | Neuroscience discovery | Positive breakthrough (viral formula) |
-| Wed | Human Achievement | ASPIRATION | POSITIVE | Famous figure + neuroscience | Achiever explained through brain science |
-| Thu | Camino Data | CREDIBILITY | POSITIVE | Proprietary debrief data | Data insight from 2,249 debriefs |
-| Fri | Positive Edge | DESIRE | POSITIVE | Positive performance research | What high performers DO differently |
-| Sat | The Tool | EMPOWERMENT | POSITIVE | Actionable technique + research | Give the reader a tool they can use today |
-| Sun | Winning Ways | CONFIDENCE | POSITIVE | Household name + brain science | Famous person's habit explained through neuroscience |
+## Step 2: THE PROBLEM (Next 2-3 Sentences)
+Ground it in a SPECIFIC business scenario. Use job titles, meeting contexts, decision moments. Never generic.
 
-## HARD DIVERSITY RULES
-1. NO TWO POSTS in the same week may share the same primary emotion
-2. NO TWO POSTS may use the same evidence type
-3. NO TWO POSTS may share the same core message
-4. MAXIMUM 1 NEGATIVE POST per week (Monday only)
-5. Minimum 5 posts per week must lead with possibility, aspiration, or empowerment
-6. Each day must draw from a different pillar
-7. A CEO reading all 7 should think "this person shows me what's possible and gives me tools to get there"
+## Step 3: THE NEUROSCIENCE (Core Teaching)
+Explain WHY this happens in the brain. Reference the mechanism (cortisol, dopamine, prefrontal cortex, cognitive load). Use plain language. Cite data where possible. WOW not HOW: reveal the what and the why, NEVER the specific fix.
 
-# VOICE & TONE
-- Write as Craig: warm, direct, confident, experienced, never preachy or bro-y
-- Scientifically grounded but accessible ("This is not motivation. It is biology.")
-- Direct and challenging — "The Truth Teller" who respects you enough to be honest
-- Empathetic to real executive pressures (board, investors, family, legacy)
-- Short paragraphs (1-2 sentences), mobile-first
-- Post length: 150-350 words value + CTA
-- Opening hook must stop the LinkedIn scroll
-- 1-2 emojis maximum per post, sparingly
-- No hashtags in body (2-3 at end optional)
-- No engagement bait
-- Always include ONE motorsport bridge sentence in the body
+## Step 4: THE BRIDGE (Connection to Leader)
+Show how this pattern appears at every level. Reference real results or anonymised client patterns. Make the reader feel seen. Use motorsport as the BRIDGE — connect something from the racing world to the business world.
 
-# LANGUAGE RULES (NON-NEGOTIABLE)
-## UK ENGLISH ONLY
-ALL spelling must be British English. NEVER use American spelling.
-- realise NOT realize, organise NOT organize, recognise NOT recognize
-- behaviour NOT behavior, colour NOT color, favour NOT favor, honour NOT honor
-- centre NOT center, metre NOT meter, litre NOT liter
-- programme NOT program (except computer programs), practise (verb) NOT practice (verb)
-- defence NOT defense, licence (noun) NOT license (noun)
-- travelling NOT traveling, cancelled NOT canceled, focussed NOT focused
-- analyse NOT analyze, catalyse NOT catalyze
-- judgement NOT judgment, ageing NOT aging
-- specialise NOT specialize, optimise NOT optimize, maximise NOT maximize
-- amongst NOT among, whilst NOT while (both acceptable but prefer the British forms)
+## Step 5: THE CTA
+Separated from value content by a line break and visual separator (··). "Oh, by the way" energy. CTA is ALWAYS unrelated to the post topic. Links to the Winning Formula Assessment.
 
-## BANNED FORMATTING (these shout "AI-generated")
-NEVER use any of the following in post text:
-- Em dashes (—) or en dashes (–). Use commas, full stops, or colons instead.
-- Bullet points or list markers of any kind (•, -, *, ··) in the post body
-- Bold markers (**text**) or italic markers (*text*) in the post body
-- The phrase "Here's the thing" or "Here is the thing"
-- The phrase "Let that sink in"
-- The phrase "Game-changer" or "game changer"
-- The phrase "In today's fast-paced world" or any variation
-- The phrase "It's not just about X, it's about Y"
-- The word "delve" or "leverage" (as a verb) or "utilize"
-- The word "crucial" (use "critical" or "essential" instead)
-- The word "landscape" (unless literally about geography)
-- The word "elevate" (unless literally about height)
-- The word "foster" (unless literally about children)
-- The word "realm" or "robust" or "paramount"
-- Numbered lists in the post body
-- Any markdown formatting in the post body
-Write in natural, conversational British English. Every post should read like Craig typed it himself.
+# VOICE & TONE (Mandatory Rules — Non-Negotiable)
+- UK English spelling throughout (colour, analyse, programme, favourite)
+- Warm, direct, confident. Like a trusted advisor talking to a peer.
+- Never preachy. Never motivational-poster language. Never "you have got this" or "believe in yourself."
+- Data-led and evidence-based. Every claim backed by numbers or named examples.
+- Slightly provocative. Challenge assumptions. Make the reader question what they think they know.
+- MOTORSPORT BRIDGES: Use motorsport as a BRIDGE to business insights. This is the unique differentiator. The reader should think "wait, that racing insight applies to MY boardroom."
+- NEVER use em dashes, en dashes, or GPT-style formatting in post body.
+- NEVER use ** or any markdown formatting in post body.
+- No emojis in the value section. Occasional use in CTA is acceptable.
+- No bullet point symbols in post body.
+- Short paragraphs (1-2 sentences), mobile-first formatting.
+- Post length: 200-400 words value content + CTA.
+- First line is the hook. Must stop the scroll with a SPECIFIC data point or dramatic scenario.
 
-# POST STRUCTURE — THE 6-STEP VIRAL FRAMEWORK (MANDATORY)
-Every post MUST follow this exact 6-step sequence. This framework drove 19,845 impressions from a single post. But the original viral post was MISSING step 5, which is why it got only 2 comments on 20,000 impressions. Step 5 is now NON-NEGOTIABLE.
+# WEEKLY CONTENT BALANCE
+The weekly mix is rebalanced to feel energising, not diagnostic:
+- Monday: HIDDEN COST (Scary) — ONE problem post. The cost of a specific leadership behaviour.
+- Tuesday: BRAIN BREAKTHROUGH (Strange) — Neuroscience discovery. Wonder, possibility.
+- Wednesday: HUMAN ACHIEVEMENT (Familiar) — Famous figure + neuroscience. Aspiration.
+- Thursday: CAMINO DATA INSIGHT (Strange/Sexy) — Proprietary data. Credibility.
+- Friday: THE POSITIVE EDGE (Sexy) — What high performers do differently. Desire.
+- Saturday: THE TOOL (Free Value) — One actionable technique. Empowerment.
+- Sunday: WINNING WAYS (Familiar) — Household name + neuroscience. Confidence.
+Balance: 1 pain/cost (Mon), 6 positive/possibility.
 
-## STEP 1: THE WOW (Hook — first 2-3 lines)
-What the research found. A genuinely surprising, counter-intuitive finding that violates expectations.
-- MUST start with a specific data point or named study
-- Use the "three negatives before the reveal" pattern: "Not with X. Not with Y. With Z."
-- This is what makes people click "see more" — the curiosity gap
-- Example: "An NIH-funded study just showed we can reverse cognitive aging by a decade. Not with a drug. Not with surgery. With targeted brain exercises."
+# CONTENT RULES
+- WOW not HOW: Reveal what the problem is and why it happens (neuroscience). NEVER give the specific fix or methodology.
+- Never use generic coaching language: "mindset shift", "unlock your potential", "be your best self", "level up".
+- Every post must reference a specific business scenario (meeting type, decision context, time of day, energy level).
+- Use real data: 2,358 debriefs, 808 PBs, 438 podiums, 159 wins, 155 racers, 100+ circuits, 60 months, 4.9/5 across 85 reviews.
+- ROTATE credibility claims. Never use the same stat in consecutive posts.
 
-## STEP 2: THE CREDIBILITY (Brain mechanism — next 3-4 paragraphs)
-The specific brain chemistry involved. Name the chemical, the system, the researcher.
-- Reference specific neurotransmitters: acetylcholine, cortisol, dopamine, norepinephrine, BDNF
-- Name the institution and lead researcher
-- Explain WHAT the mechanism does in the body/brain
-- This is what generates DWELL TIME — people read because it's genuinely educational
-- Example: "Dr. Etienne de Villers-Sidani at McGill put it simply: this is the first time any intervention has been shown to do that in humans."
-
-## STEP 3: THE BRIDGE (Why this matters to YOU — 1-2 paragraphs)
-Connect the research directly to your audience's identity and daily reality.
-- Direct callout: "Why does this matter if you're a CEO or founder in your 40s or 50s?"
-- Reframe the finding from scary to empowering
-- Use business language: board meeting, quarterly review, delegation, P&L
-- The "identity statement" — a line they'll remember. Example: "Your prefrontal cortex isn't in permanent decline. It's in a state of underuse."
-
-## STEP 4: THE AUTHORITY (Craig's coaching line — 1-2 sentences)
-This is where Craig's real experience makes it unmistakably his, not generic AI content.
-- Motorsport bridge: "The leaders I work with, in motorsport and in business..."
-- Reference real coaching data or a specific observation from the paddock
-- This line should feel personal and unmanufacturable — it's what no other LinkedIn coach can write
-
-## STEP 5: THE ENGAGEMENT TRIGGER (CRITICAL — this was MISSING from the viral post)
-⚠️ This step is the difference between 19,845 passive impressions and actual pipeline.
-The viral post ended with "Your brain built your business. It can be rewired to build the next chapter too." Then went straight to CTA. That's why it got only 2 comments.
-
-INSTEAD, after the value and before the CTA, you MUST include a PROVOCATIVE question that:
-- Forces the reader to reflect on their own experience
-- Cannot be answered with yes/no — requires a multi-sentence comment
-- Creates the urge to share their own story
-- Generates thread depth, which the algorithm rewards with MORE distribution
-
-GOOD engagement triggers:
-- "But here's the question most leaders avoid: when was the last time you deliberately trained the organ that runs everything?"
-- "I'm curious. How many of your last 10 strategic decisions were made after 4pm when your cortisol was tanking?"
-- "Tell me this has happened to you: you sit down for deep work and within 11 minutes someone knocks on your door."
-- "What would your leadership look like if you operated from flow instead of cortisol for just one full quarter?"
-
-BAD engagement triggers (NEVER use these):
-- "Does this resonate?" (too generic, yes/no answer)
-- "What do you think?" (too vague)
-- "Agree or disagree?" (binary, no depth)
-- "Thoughts?" (lazy, generates nothing)
-
-## STEP 6: THE CTA (Completely unrelated — after a blank line)
-"Oh, by the way..." / "Completely unrelated." / "Side note."
-- Must feel COMPLETELY separate from the post content
-- "With or without you" energy — never needy
-- Links to the Winning Formula assessment
-- The CTA works BECAUSE the value section already established trust
-
-# THE WINNING FORMULA ASSESSMENT (CTA DESTINATION)
-- ScoreApp-based, 25 questions, 3 minutes
-- URL: https://caminocoaching.co.uk/leader-assessment
-- Scores across 5 pillars: Clarity Under Pressure, Focus & Flow, Execution Rhythm, Feedback & Debrief Loops, Influence & Culture
-- Most leaders score below 50%
-- Instant personalised report
-- Based on same protocols used by championship motorsport teams
+# THE CTA — WINNING FORMULA ASSESSMENT
+Primary CTA: "Oh, by the way. I have built a free leadership performance assessment that scores you across the 5 pillars elite performers use to stay in flow under pressure. 25 questions. 3 minutes. Instant personalised report. → Take the Winning Formula assessment here: https://caminocoaching.co.uk/leader-assessment"
+The 5 pillars: Clarity Under Pressure, Focus & Flow, Execution Rhythm, Feedback & Debrief Loops, Influence & Culture.
 
 # FUNNEL CONTEXT
-LinkedIn Post → Winning Formula Assessment → Instant Report → Executive Flow Blueprint (3-day free training, 3x/year) → Championship Strategy Call → P1 Programme (£4,000, 43% close rate)
-TARGET: 10 people into the free training per month. This requires ~34,000 impressions/month with 2-3 viral-level posts.
+LinkedIn Post > Winning Formula Assessment (25 questions, 3 minutes, instant report) > Executive Flow Blueprint (3-day free training, 3x/year) > Championship Strategy Call (free, 45 min, 1-on-1) > P1 Programme (£4,000, 43% close rate)
+TARGET: 10 people into the free training per month.
 
-# RESEARCH MINING DIRECTIVE
-The AI should constantly search for NEW studies on: cognitive performance, neuroplasticity, decision fatigue, stress hormones and leadership, sleep and executive function, cortisol and performance, dopamine and motivation, flow state triggers, attention and deep work, burnout neuroscience. There is a new study published practically every week. Each one is potential fuel for this exact 6-step framework.
+# REVIEW CONTENT PLAYBOOK RULES
+- NEVER post a review as the entire content of a post. Reviews without a teaching hook get buried.
+- NEVER fabricate, paraphrase, or embellish a review. Use exact quotes or do not quote at all.
+- NEVER use more than one review quote per post.
+- Use review quotes in the CTA bridge section to pre-handle objections naturally.
+- Trustpilot link: https://uk.trustpilot.com/review/caminocoaching.co.uk
 
-# 90-DAY PERFORMANCE ANALYSIS (Nov 2025 — Feb 2026)
-## The Viral Post Debrief
-- 19,845 impressions (87.7% of ALL impressions in 90 days) from ONE post
-- BUT: only 34 reactions, 2 comments, 4 reposts = 0.17% engagement rate
-- The algorithm LOVED it (distribution was enormous for the account size)
-- The audience consumed it PASSIVELY — they read it, found it interesting, and kept scrolling
-- ROOT CAUSE: No engagement trigger before CTA. The post informed but didn't PROVOKE.
-- FIX: Every post now includes Step 5 (engagement trigger) — the question that forces reflection and generates comments
+# CONTENT THE AI MUST NEVER CREATE (Dead Zone Rules)
+- Self-promotional announcements without value
+- Testimonial-only posts without a teaching hook
+- Follow-up or sequence posts that assume the reader saw yesterday's content
+- Generic motivational content that could apply to any coach
+- Posts about the programme, pricing, or logistics
+- Pure neuroscience explainers without a business-specific anchor
 
-## What FAILED (Other 49 posts — avg 120 impressions, 1 engagement)
-- Generic hooks without specific data points
-- "Research shows" without naming the source
-- Surface-level advice instead of deep neuroscience mechanisms
-- Missing direct CEO/founder callout
-- No engagement trigger at all
-- CTA felt connected to content instead of unrelated
-
-## AUDIENCE DATA
-- 27.2% are decision-makers (MD 8.3%, Owner 6.4%, CEO 5.5%, Founder 4.8%)
-- 56% are leadership-level (Senior 22.6%, Director 13.3%, CXO 10.1%, VP 10%)
-- UK-centric (London 12.2%, Lancaster 4.5%, Manchester 3.8%)
-- Company size: 1-50 employees (38.1%) — SME founders and scale-up CEOs
-- Industries: Motor Vehicle (9%), Financial Services (8.5%), Business Consulting (2.9%)
-
-# DUPLICATION GUARD — Same subject is fine, but ALWAYS bring a NEW angle
-The aim is to provoke interest. You CAN revisit the same themes (neuroplasticity, decision fatigue, multitasking, etc.) but you MUST bring:
-- A NEW study, new data point, or new researcher (not the same McGill/NIH acetylcholine study from the viral post)
-- A DIFFERENT provocative angle on the same subject
-- A FRESH "stopping stat" that the audience hasn't seen before
-- A new application or business context for the same neuroscience
-NEVER copy the same hook, same stat, or same framing twice. Same subject, new ammunition.
-
-# VISUAL ROTATION SYSTEM — 5 TYPES (MANDATORY VARIETY)
-You need 5 types of visuals rotating through weekly content. The variety itself signals a real person is behind the account, not a content bot.
-
-## Type 1: DATA CARDS (2-3 per week) — Your workhorse visuals
-- Dark background, one headline number, branding
-- Save-worthy because executives screenshot useful data
-- Looks completely different from every other coach posting sunset motivation
-- Example: "699 PERSONAL BESTS. 2,249 DEBRIEFS. 57 MONTHS." or "CONFIDENCE 8.5+/10 = 2.7x MORE PERSONAL BESTS."
-
-## Type 2: REAL PADDOCK PHOTOS (1-2 per week) — Most powerful visual asset
-- Real photos from 10 seasons in motorsport paddocks. Craig on the grid, with riders, pit lane, debriefs happening in real time
-- Nobody else has these. A photo of you coaching in a MotoGP garage is worth more than any AI image
-- Even rough phone-quality paddock photos outperform polished graphics because they feel authentic
-- LinkedIn's algorithm and audience both reward authenticity
-
-## Type 3: AI-GENERATED IMAGES (1-2 per week MAXIMUM) — Strategic use only
-- Best for neuroscience explainer posts about brain chemistry, cortisol, dopamine, prefrontal cortex
-- AI-generated brain with lighting effects or neural pathways reinforces "this is science, not motivation"
-- If every post has an AI image, the feed looks like every other AI-content creator
-
-## Type 4: TEXT QUOTE CARDS (1 per week max) — Your own words, your own data
-- Single line from coaching experience on clean branded background
-- NOT generic wisdom. Must be data-backed and uniquely yours
-- "Your prefrontal cortex is not in decline. It is in underuse." or "Confidence is not a feeling. It is a 2.7x multiplier."
-
-## Type 5: CAROUSEL DOCUMENTS (1 per week) — LinkedIn algorithm favourite
-- Document posts get highest engagement rates because they generate dwell time
-- 6-8 slides: Slide 1 = hook, Slides 2-7 = one finding per slide, Slide 8 = bridge + CTA
-- Gets saved, gets shared, keeps people on post longer than any other format
-
-## WEEKLY VISUAL MIX
-- Monday: Data Card + debrief insight post
-- Tuesday: Paddock Photo + coaching story
-- Wednesday: AI Image + neuroscience explainer
-- Thursday: Carousel Document + deeper data dive
-- Friday: Real Photo + client result or case study
-- Saturday: Text Quote Card + your own insight
-- Sunday: Data Card or AI Image + research-based post
-
-## NON-NEGOTIABLE BRAND ELEMENTS (ALL visual types)
-- Colour palette: Dark navy (#06080e), gold (#C9A84C), pillar accent colours
-- Font: Inter (clean sans-serif for data, branding)
-- Logo/mark: Same position every time (bottom-right)
-- This builds visual recognition so people know it is you before reading a word
-
-## WHAT TO STOP DOING
-- No generic stock photos
-- No same AI style on every post
-- No branded quote graphics as primary format
-- Craig has real paddock photos, real data, and a genuine story. That is the unfair visual advantage.
-
-# LINKEDIN 2026 ALGORITHM COMPLIANCE
-## High-Value Signals (prioritise these)
-✅ DWELL TIME: Write for 30+ seconds of reading. Deep insight, not surface advice.
-✅ POST SAVES: Make content bookmarkable — frameworks, specific data, actionable takeaways.
-✅ COMMENT DEPTH: The engagement trigger (Step 5) is what drives comments. Comments trigger MORE distribution.
-✅ SHARE WITH CONTEXT: Content worth recommending within leadership circles.
-✅ Short paragraphs, line breaks, mobile-optimised formatting.
-✅ First line is the hook — must stop the LinkedIn scroll with a SPECIFIC data point.
+# LINKEDIN 2026 BEST PRACTICES
+## High-Value Signals
+DWELL TIME: Write for 30+ seconds of reading. Deep insight, not surface advice.
+SAVES: Content that leaders bookmark. Specific data, actionable takeaways.
+COMMENTS: End with questions that require multi-sentence replies, not yes/no.
+Short paragraphs, line breaks, mobile-optimised formatting.
+First line is the hook. Must stop the scroll with a SPECIFIC data point.
 
 ## Low-Value Signals (avoid these)
-❌ Quick likes are deprioritised — do not optimise for likes.
-❌ NEVER: "Like if you agree" / "Share with someone" / "Tag a friend" / "Follow for more"
-❌ NEVER: External links in post body (CTA link at end only, separated)
-❌ NEVER: "DM me" — always direct to the assessment link
-
-## Posting Windows
-- Peak: Tuesday-Thursday 08:00-10:00 (also 12:00-14:00)
-- Good: Monday/Friday 07:30
-- Weekend: 09:30
-- Golden Hour: First 60 minutes determine distribution. Content must pass the quality test.
-
-# NEUROCHEMICAL REFERENCE CARD
-Every video post MUST name at least one specific brain chemical and explain its role. Text posts should include chemical references where relevant (minimum 4 out of 7 posts per week).
-
-## Available Chemicals:
-- CORTISOL (Stress Hormone): Elevated by always-on culture, back-to-back meetings, sleep deprivation. Effect: shrinks prefrontal cortex, impairs decision-making. Reduced by: box breathing, nature, exercise, sleep. Key insight: the hidden tax on leadership.
-- DOPAMINE (Motivation & Reward): Triggered by novelty, anticipation, small wins. Effect: drives focus, motivation, creativity. Depleted by: constant notifications, routine. Key insight: rewards ANTICIPATION more than achievement.
-- SEROTONIN (Confidence & Status): Boosted by exercise, sunlight, gratitude. Effect: emotional stability, leadership presence. Depleted by: isolation, comparison. Key insight: linked to social hierarchy perception.
-- OXYTOCIN (Trust & Connection): Released by genuine conversation, vulnerability, shared goals. Effect: team cohesion, trust, psychological safety. Blocked by: micromanagement. Key insight: chemical basis of high-performing teams.
-- TESTOSTERONE (Confidence & Drive): Boosted by winning, exercise, power posture. Effect: risk tolerance, assertiveness, decision confidence. Key insight: affects BOTH men's and women's leadership confidence.
-- ENDORPHINS (Pain-Relief & Flow): Released by sustained effort, laughter, flow states. Effect: pain tolerance, euphoria, sustained focus. Key insight: released ~20 minutes into sustained effort, the gateway to flow state.
-
-# VIDEO PRODUCTION SYSTEM
-## Weekly Video Schedule: 4 videos (Mon/Tue/Thu/Sat) + 3 text posts (Wed/Fri/Sun)
-## Video Format: 60-second LinkedIn native video. Manus slide deck + HeyGen avatar + ElevenLabs voice.
-## Video Structure:
-- SECONDS 1-5 (Hook Slide): Provocative statement in large text. Avatar says it aloud. Must stop the scroll.
-- SECONDS 5-15 (The Chemical): Name the brain chemical, what it does, what most people get wrong.
-- SECONDS 15-40 (The Insight): 2-3 slides with key finding, research source, business application.
-- SECONDS 40-50 (The Bridge): Connect to viewer's daily life. Direct and personal.
-- SECONDS 50-60 (Engagement Trigger): Question for comments. Avatar asks it on camera.
-## CRITICAL FOR ELEVENLABS: All numbers in narration scripts must be written out in full text. "Two thousand two hundred and forty nine" not "2,249". "Eighty one percent" not "81%".`;
+NEVER: "Like if you agree" / "Share with someone" / "Tag a friend" / "Follow for more"
+NEVER: Generic motivation or "you can do it" energy`;
 
 
 // ─── Generate Article Topics with Web Search (Weekly Wizard Step 1) ──
-export async function generateTopics(pillars, seasonalContext, apiKey, model = 'gpt-4o') {
-    const pillarList = pillars.map((p, i) => {
-        const schedule = WEEKLY_SCHEDULE[i];
-        return `${i + 1}. ${schedule.day} — ${p.name} [${schedule.polarity.toUpperCase()}]
-   CONTENT DNA:
-   - Emotion: ${schedule.emotion.toUpperCase()} (this is the ONLY post that should create ${schedule.emotion} this week)
-   - Polarity: ${schedule.polarity.toUpperCase()} — ${schedule.polarity === 'negative' ? 'this is the ONLY problem/cost post allowed this week' : 'this post MUST lead with possibility, achievement, tools, or aspiration — NOT problems'}
-   - Evidence type: ${schedule.evidenceType} (${schedule.polarity === 'negative' ? 'SEARCH FOR alarming research' : ['breakthrough-science', 'human-achievement', 'innovation-story', 'positive-research'].includes(schedule.evidenceType) ? 'SEARCH FOR positive/achievement stories' : 'DO NOT SEARCH — use Craig\'s proprietary data or protocols'})
-   - Content type: ${schedule.contentType}
-   - Research category: ${schedule.researchCategory}
-   - Search mandate: ${schedule.searchMandate}
-   - Day brief: ${schedule.dayBrief}`;
-    }).join('\n\n');
+export async function generateTopics(pillars, seasonalContext, apiKey) {
+
+    const daySlots = WEEKLY_SCHEDULE.map((slot, i) => {
+        return `${slot.day}: ${slot.contentType} — ${slot.dayBrief}\nSEARCH FOCUS: ${slot.searchFocus}\nSEARCH MANDATE: ${slot.searchMandate}`;
+    });
 
     const seasonNote = seasonalContext
-        ? `\n\nSEASONAL CONTEXT: We are in ${seasonalContext.season}. Where relevant, frame topics around: ${seasonalContext.context}`
+        ? `Season context: ${seasonalContext.season} — ${seasonalContext.context}`
         : '';
 
-    const prompt = `You are generating 7 LinkedIn topic angles for Craig Muirhead / Camino Coaching. Each day has a LOCKED Content DNA that you MUST follow. This is not optional.
+    const prompt = `Search the web for 7 stories from the last 7-30 days for a business leadership mental performance coach's LinkedIn. The audience is CEOs, founders, and senior leaders running £1M-£50M businesses.
 
-═══ EMOTIONAL POLARITY RULE (NON-NEGOTIABLE) ═══
+TARGET SOURCES: Harvard Business Review, McKinsey Quarterly, Financial Times, The Economist, Nature, Science, Stanford GSB, MIT Sloan, Wall Street Journal, Forbes, Wired, TED, BBC World.
+ALSO WELCOME: Neuroscience journals, sports psychology studies, biohacking research, sleep science, performance technology, elite athlete stories.
 
-MAXIMUM 1 post may lead with a problem, cost, or negative statistic. That post is MONDAY ONLY.
-The remaining 6 posts MUST lead with POSSIBILITY, not problems.
+WEARABLE TECH & BIOMETRICS (actively search these):
+- WHOOP: HRV studies, strain tracking, recovery science, sleep coaching data, CEO/founder performance case studies, Whoop Journal correlations
+- OURA RING: Sleep architecture research, readiness scores, circadian rhythm insights, temperature tracking, executive health studies
+- APPLE WATCH: Health feature innovations, heart rate variability research, mindfulness features, blood oxygen studies, fall detection/safety data, executive wellness programmes
+- GARMIN: Body Battery energy monitoring, stress tracking, training load data, endurance athlete insights that bridge to executive stamina, advanced sleep/HRV metrics
+- GOPRO: Peak performance documentation, flow state capture in extreme sport, first-person perspective training, adventure athlete mental preparation
+- GENERAL WEARABLES: Any new study linking wearable biometric data to cognitive performance, decision quality, leadership stamina, or executive burnout prevention
 
-If a CEO sees Craig's LinkedIn feed, they should think "this person shows me what's possible and gives me tools to get there" — NOT "this person keeps telling me my brain is broken."
-
-One problem post earns the right to deliver solutions. Six possibility posts create desire and trust.
-
-═══ 7 RESEARCH CATEGORIES (one per day, genuinely different) ═══
-
-Each day MUST search for a DIFFERENT type of content. If two days produce similar topics, you have FAILED.
-
-1. COST/PROBLEM RESEARCH (Monday ONLY): One alarming study about cognitive damage, stress, decision fatigue, or burnout. This earns the right to deliver solutions the other 6 days. Search: workplace productivity, cortisol, burnout stats.
-
-2. NEUROSCIENCE BREAKTHROUGHS (Tuesday): New research showing the brain can do something previously thought impossible. Neuroplasticity, cognitive reversal, brain chemical discoveries. This is the viral formula (19,845 impressions). Search: neuroplasticity studies, brain training, cognitive aging reversal.
-
-3. FAMOUS ACHIEVERS + NEUROSCIENCE (Wednesday): A well-known inventor, founder, or athlete — explain the neuroscience behind WHY their habit worked. Dyson = neuroplasticity. Edison = hypnagogic states. Bezos = prefrontal glucose. Never reuse a person within 4 weeks. Search: famous founders habits, athletes mental prep.
-
-4. PROPRIETARY DATA (Thursday): NO web search needed. Use Craig's 2,249-debrief dataset exclusively. One authority anchor + one insight hook + one bridge to business. Show WHAT happened, not HOW (that's the paid programme).
-
-5. POSITIVE PERFORMANCE SCIENCE (Friday): Research showing what WORKS. McKinsey flow 500%. Stanford walking 81% creativity. Exercise + BDNF. Sleep + executive function. Meditation + prefrontal cortex. ALWAYS lead with the positive outcome. Search: positive neuroscience, what works research.
-
-6. ACTIONABLE TOOLS (Saturday): Give one specific technique backed by data. Box breathing (81%), 90-min focus block (37%), pre-meeting reset, post-decision debrief. Give enough to be useful. Hold back the full system.
-
-7. HOUSEHOLD NAMES + BRAIN SCIENCE (Sunday): Google, Patagonia, Navy SEALs, Pixar — explain WHY their approach works through neuroscience. Formula: Famous org/person + specific thing + brain science + "you can apply this." Search: well-known figures habits neuroscience.
-
-═══ HARD DIVERSITY RULES ═══
-
-1. NO TWO POSTS may share the same primary emotion. Monday = fear, Tuesday = wonder, Wednesday = aspiration, Thursday = credibility, Friday = desire, Saturday = empowerment, Sunday = confidence. If two posts create the same feeling, REWRITE one.
-
-2. NO TWO POSTS may use the same evidence type. Each day draws from a DIFFERENT research category.
-
-3. NO TWO POSTS may share the same core message. The audience should read all 7 and think "this person covers genuinely different territory."
-
-4. MAXIMUM 1 NEGATIVE POST. If you find yourself writing a second headline about damage, decline, costs, or "here's what's broken," STOP and rewrite to show what's POSSIBLE instead.
-
-═══ CRAIG'S PROPRIETARY DATA (Thursday only — POSITIVE framing) ═══
-- 2,249 performance debriefs, 699 personal bests, 394 podiums, 138 race wins
-- 81% of successful sessions start with box breathing
-- Confidence 8.5+/10 = 2.7x more PBs
-- Calum Beach: 50% win rate, 85% podium rate (most consistent debriefer)
-- Cormac Buchanan: 9.11/10 flow state score across 30 sessions at World Championship level
-- Athletes who debrief within 30 minutes retain 40% more insight
-- Walter Alblas (CEO): cut hours 70→45, revenue went UP
-- 94% of podiums correlate with pre-session visualisation
-- Box breathing: 4-4-4-4, costs nothing, takes 2 minutes
-- 90-minute focus block → 37% decision quality improvement
-
-═══ THE 7 CONTENT SLOTS ═══
-
-${pillarList}
 ${seasonNote}
 
-═══ WHAT EACH TOPIC MUST INCLUDE ═══
+Find one story for each slot:
+${daySlots.map((d, i) => `${i + 1}. ${d}`).join('\n\n')}
 
-For each topic, provide:
-1. headline: A specific LinkedIn hook angle matching the day's POLARITY (positive or negative)
-2. sourceArticle: For Mon → alarming external source. For Tue/Wed/Fri/Sun → positive external source or achievement story. For Thu → "Craig Muirhead proprietary data". For Sat → technique with research backing.
-3. articleUrl: URL if external source found, otherwise empty string
-4. talkingPoints: 2-3 key points connecting to the assigned content type
-5. emotionalHook: Must match the LOCKED emotion AND polarity for that day
-6. mechanism: A specific neuroscience mechanism (name the brain chemical or system)
-7. motorsportBridge: ONE sentence connecting to Craig's actual paddock experience (not generic metaphors)
+RULES:
+- Every headline must connect to the MENTAL PERFORMANCE or NEUROCHEMISTRY side of leadership
+- Use BUSINESS language: CEO, boardroom, strategic decision, quarterly review, board meeting, executive team, founder, scaling
+- Related topics are welcome: neuroscience, peak performance, biometrics (HRV, EEG, wearables, sleep tracking), elite sport (as a BRIDGE to business), technology, brain science
+- WEARABLE DATA stories are HIGHLY VALUED: new studies from Whoop, Oura, Apple Watch, Garmin showing how biometric tracking improves decision-making, recovery, sleep, or prevents burnout in leaders
+- At least 1 story per week should reference wearable tech, health tracking data, or biometric research where possible
+- At least 2 stories should include SPECIFIC data points or research findings
+- MOTORSPORT BRIDGES: Where relevant, use motorsport as a bridge to business (e.g., "F1 pit crews make 80 decisions in 2.4 seconds — here is the boardroom parallel"). F1 drivers use biometric wearables extensively — this is a natural bridge topic.
+- Thursday MUST use Craig's proprietary data (2,358 debriefs, 808 PBs, etc.) — do NOT search externally for this slot
 
-═══ QUALITY CHECK BEFORE RETURNING ═══
-
-1. Count the NEGATIVE headlines. If more than 1 leads with a problem, cost, or damage → REWRITE.
-2. Read all 7 headlines side by side. Do they sound like 7 genuinely different perspectives? Or variations of the same message?
-3. Check the emotional range: fear → wonder → aspiration → credibility → desire → empowerment → confidence. Is each emotion distinct?
-4. The week should feel like: "Here's one thing to watch out for (Mon). Here's what the brain can actually do (Tue). Here's a famous achiever to learn from (Wed). Here's unique data from 2,249 debriefs (Thu). Here's what high performers do differently (Fri). Here's a tool you can try today (Sat). Here's a household name whose habits you can copy (Sun)."
-
-Format as JSON array:
+Return a JSON array with 7 objects:
 [
   {
-    "pillarId": "hidden-cost",
-    "headline": "683 hours of productive time lost every year to interruption recovery. A University of California study tracked 36 workers and the data is uncomfortable.",
-    "sourceArticle": "Title — Publication — key finding",
+    "pillarId": "${pillars[0]?.id || 'hidden-cost'}",
+    "headline": "Compelling headline connecting the story to leadership mental performance",
+    "sourceArticle": "Article title — Publication",
     "articleUrl": "URL",
     "talkingPoints": ["Point 1", "Point 2", "Point 3"],
-    "emotionalHook": "Fear: that number is higher than I expected",
-    "mechanism": "Cognitive switching tax — prefrontal cortex reset cycle after context change",
-    "motorsportBridge": "In F1, the team radio goes silent during critical overtaking manoeuvres. They know that even one word at the wrong moment costs the driver 0.3 seconds."
+    "emotionalHook": "What should the business leader feel?",
+    "mechanism": "Neuroscience mechanism or brain chemical referenced",
+    "businessRelevance": "One sentence connecting to business leadership",
+    "contentBrief": "Type of post"
   }
 ]
 
-Return ONLY the JSON array with 7 items.`;
+Return ONLY the JSON array with exactly 7 items.`;
 
-    return await callOpenAIWithSearch(prompt, apiKey, true);
+    return await callGeminiWithSearch(prompt, apiKey, true);
 }
 
-// ─── Generate a Single Post ──────────────────────────────────
-export async function generatePost({ topic, pillar, framework, cta, authorityLine, motorsportBridge, apiKey, model = 'gpt-4o', campaignDay = null, dataLayer = null, reviewLayer = null, contentDNA = null }) {
 
-    // Determine if this is a video day
-    const isVideoDay = contentDNA?.postFormat === 'video';
+// ─── Generate a Single Post ──────────────────────────────────
+export async function generatePost({ topic, pillar, framework, cta, authorityLine, motorsportBridge, apiKey, campaignDay = null, scheduleDay = null }) {
 
     const campaignNote = campaignDay
         ? `\nCAMPAIGN POSITION: This is ${campaignDay.day} — Purpose: ${campaignDay.purpose}. Target emotion: ${campaignDay.emotion}. Word count: ${campaignDay.wordCount}.`
         : '';
 
-    // Build Content DNA instructions
-    let contentDNANote = '';
-    if (contentDNA) {
-        const evidenceDesc = {
-            'external-research': 'cite a named alarming external study (this is the ONLY negative post this week)',
-            'breakthrough-science': 'find a POSITIVE neuroscience breakthrough — what the brain CAN do, not what damages it',
-            'human-achievement': 'explain a famous achiever\'s success through neuroscience — Dyson, Edison, Bezos, Blakely, Kobe',
-            'proprietary-data': 'use ONLY Craig\'s 2,249-debrief dataset — one authority anchor + one insight hook + bridge to business',
-            'positive-performance-research': 'cite research showing what WORKS — McKinsey flow 500%, Stanford walking 81%, exercise BDNF, meditation prefrontal cortex',
-            'actionable-protocol': 'give the reader a specific tool they can use TODAY — box breathing, focus block, pre-meeting reset — backed by data',
-            'famous-figure-neuroscience': 'connect a household name (Google, Patagonia, Navy SEALs) to the underlying brain science and then to the reader\'s business',
-            'aspirational-benchmark': 'paint what peak performance LOOKS and FEELS like — create desire, not anxiety',
-            'innovation-story': 'tell the story of an invention or breakthrough that happened through different thinking',
-            'positive-research': 'cite research showing what WORKS — not what\'s broken'
-        };
-        contentDNANote = `\nCONTENT DNA FOR THIS POST (NON-NEGOTIABLE):
-- Day: ${contentDNA.day}
-- Polarity: ${(contentDNA.polarity || 'positive').toUpperCase()} — ${contentDNA.polarity === 'negative' ? 'this is the ONE problem/cost post this week' : 'this post MUST lead with POSSIBILITY, achievement, or tools — NOT problems'}
-- Primary emotion: ${contentDNA.emotion.toUpperCase()} — this post must create ${contentDNA.emotion}, nothing else
-- Evidence type: ${contentDNA.evidenceType} — ${evidenceDesc[contentDNA.evidenceType] || 'use appropriate evidence for this content type'}
-- Content type: ${contentDNA.contentType}
-- Brief: ${contentDNA.dayBrief}\n`;
-    }
+    // Visual format guidance from schedule
+    const vf = scheduleDay?.visualType ? VISUAL_TYPES[scheduleDay.visualType] : null;
+    const platformNote = scheduleDay
+        ? `\nCONTENT TYPE: ${scheduleDay.contentType}
+POST FORMAT: ${scheduleDay.postFormat}
+VISUAL TYPE: ${scheduleDay.visualType}
+${vf ? `VISUAL GUIDANCE: ${vf.name} — ${vf.description}\nIMAGE NOTE: ${vf.guidance}` : ''}`
+        : '';
 
-    // Build data layer instructions
-    let dataLayerNote = '';
-    if (dataLayer) {
-        if (dataLayer.anchor) {
-            dataLayerNote += `\nAUTHORITY ANCHOR (Layer 1 — use in the FIRST TWO LINES as a credibility signal, NOT the main topic):
-"${dataLayer.anchor.fullLine}"
-Stat to weave in: ${dataLayer.anchor.stat} ${dataLayer.anchor.label}\n`;
-        }
-        if (dataLayer.insight) {
-            dataLayerNote += `\nINSIGHT HOOK (Layer 2 — this is the CENTRAL TOPIC of the post, build the value section around it):
-Finding: ${dataLayer.insight.finding}
-Key stat: ${dataLayer.insight.stat}
-Use for: ${dataLayer.insight.useFor}
-Business bridge: ${dataLayer.insight.businessBridge}
-Data card text (for visual): ${dataLayer.insight.dataCardText}\n`;
-        }
-        if (dataLayer.bridgePattern) {
-            dataLayerNote += `\nBRIDGE PATTERN (Layer 3 — use this pattern to connect the insight to business):
-Pattern: ${dataLayer.bridgePattern.name} (${dataLayer.bridgePattern.prefix})
-Template: ${dataLayer.bridgePattern.template}
-Example: ${dataLayer.bridgePattern.example}\n`;
-        }
-        dataLayerNote += `\nCRITICAL: WOW NOT HOW — Show WHAT the data found and WHY it matters. NEVER reveal the specific methods, tools, or protocols. The HOW is the paid programme.\n`;
-    }
-
-    // Build review layer instructions
-    let reviewLayerNote = '';
-    if (reviewLayer) {
-        if (reviewLayer.languagePattern) {
-            reviewLayerNote += `\nCLIENT LANGUAGE PATTERN TO MIRROR (do NOT quote directly — mirror the thinking pattern):
-Pattern: ${reviewLayer.languagePattern.pattern}
-Client thought: "${reviewLayer.languagePattern.clientPhrase}"
-Business mirror to use: "${reviewLayer.languagePattern.businessMirror}"
-Use for: ${reviewLayer.languagePattern.useFor}\n`;
-        }
-        if (reviewLayer.caseStudy) {
-            reviewLayerNote += `\nANONYMISED CASE STUDY (weave into the post naturally, never name the client):
-Story: ${reviewLayer.caseStudy.setup}
-Transformation: ${reviewLayer.caseStudy.transformation}
-Business bridge: ${reviewLayer.caseStudy.businessBridge}\n`;
-        }
-        if (reviewLayer.useSocialProof) {
-            reviewLayerNote += `\nSOCIAL PROOF: You may include "${SOCIAL_PROOF.trustpilot.ctaLine}" as a credibility signal in or near the CTA section.\n`;
-        }
-    }
+    // Chemical context
+    const chemNote = scheduleDay?.primaryChemical && scheduleDay.primaryChemical !== 'match' && scheduleDay.primaryChemical !== 'rotate'
+        ? `\nPRIMARY CHEMICAL: ${scheduleDay.primaryChemical} — Reference this brain chemical in the neuroscience section. Name it explicitly.`
+        : scheduleDay?.primaryChemical === 'match'
+            ? '\nCHEMICAL: Match the chemical to the topic. Name the most relevant brain chemical explicitly in the post.'
+            : '\nCHEMICAL: Rotate through the 6 chemicals (cortisol, dopamine, serotonin, oxytocin, testosterone, endorphins). Name one explicitly.';
 
     const prompt = `Write a LinkedIn post for Craig Muirhead / Camino Coaching using these parameters:
 
 CONTENT PILLAR: ${pillar.name} — ${pillar.description}
-WINNING FORMULA PILLAR LINK: ${pillar.winningFormulaPillar}
+${pillar.dataPoints ? `DATA POINTS: ${pillar.dataPoints}` : ''}
+${pillar.angles ? `ANGLES: ${pillar.angles.join(', ')}` : ''}
 FRAMEWORK: ${framework.name} — ${framework.hookStyle}
-TOPIC/ANGLE: ${typeof topic === 'string' ? topic : topic.headline || topic}
+TOPIC / ANGLE: ${typeof topic === 'string' ? topic : topic.headline || topic}
 ${topic.talkingPoints ? `KEY POINTS: ${topic.talkingPoints.join(', ')}` : ''}
 ${topic.mechanism ? `MECHANISM TO REFERENCE: ${topic.mechanism}` : ''}
 ${topic.sourceArticle ? `SOURCE ARTICLE: ${topic.sourceArticle}` : ''}
-${contentDNANote}
-${dataLayerNote}
-${reviewLayerNote}
+${topic.businessRelevance ? `BUSINESS RELEVANCE: ${topic.businessRelevance}` : ''}
+${platformNote}
+${chemNote}
+
 AUTHORITY LINE TO WEAVE IN NATURALLY:
 "${authorityLine}"
 
-MOTORSPORT BRIDGE TO INCLUDE (one sentence connecting business insight to the paddock):
-"${motorsportBridge || 'Create your own motorsport bridge connecting this business insight to high-pressure motorsport performance.'}"
+${motorsportBridge ? `MOTORSPORT BRIDGE TO WEAVE IN:\n"${motorsportBridge}"` : ''}
 
-CTA TO APPEND (after a blank line, completely unrelated to post body):
+${(() => {
+            const reviewHook = getHookForPillar(pillar.id);
+            if (reviewHook) {
+                return `OPTIONAL REVIEW HOOK (use if it fits naturally, approximately 1 in 4 posts):
+Reviewer: ${reviewHook.reviewer} (${reviewHook.country}, ${reviewHook.date})
+Quote: "${reviewHook.quote}"
+Hook angle: ${reviewHook.hookAngle}
+`;
+            }
+            return '';
+        })()}
+OBJECTION-KILLING REVIEW OPTION (use naturally in CTA bridge section if relevant):
+"${OBJECTION_KILLERS.triedEverything[Math.floor(Math.random() * OBJECTION_KILLERS.triedEverything.length)].quote}" - ${OBJECTION_KILLERS.triedEverything[Math.floor(Math.random() * OBJECTION_KILLERS.triedEverything.length)].reviewer}
+
+REVIEW AUTHORITY ANCHOR (can be added to CTA section for reinforcement):
+${getReviewAuthorityLine()}
+
+CTA TO APPEND (after ·· separator, completely unrelated to post body):
 ${cta.ctaTemplate}
 ${campaignNote}
-${isVideoDay ? `
-═══ VIDEO DAY — ADDITIONAL REQUIREMENTS ═══
 
-This is a VIDEO day. In addition to the standard LinkedIn post text (which accompanies the video as a caption), you MUST also generate a complete VIDEO SCRIPT.
+THE 5-STEP WINNING FORMULA (follow this architecture):
+1. HOOK (First Line): Start with a specific data point, research finding, or dramatic business scenario. This is the ONLY line that matters for reach.
+2. PROBLEM (Next 2-3 sentences): Ground it in a SPECIFIC business scenario. Use job titles, meeting contexts, decision moments. Never generic.
+3. NEUROSCIENCE (Core Teaching): Explain WHY this happens in the brain. Reference the mechanism and name the chemical. Use plain language. Cite data. WOW not HOW.
+4. BRIDGE (Connection to Leader): Show how this pattern appears at every level. Use a motorsport bridge where natural. Make the reader feel seen.
+5. CTA (Separated): After ·· separator. "Oh, by the way" or "Completely unrelated" or "PS". "With or without you" energy.
 
-PRIMARY CHEMICAL: ${contentDNA?.primaryChemical || 'Match to the content topic'}
-${pillar.chemicalNote ? `CHEMICAL NOTE: ${pillar.chemicalNote}` : ''}
+RULES (Business Leaders LinkedIn format):
+- UK English spelling throughout (colour, analyse, programme, favourite)
+- WOW not HOW: Reveal the problem and why it happens. NEVER give the specific fix or methodology.
+- Every post must reference a specific business scenario (meeting type, decision context, time of day, energy level)
+- Use real data: 2,358 debriefs, 808 PBs, 438 podiums, 159 wins, 155 racers, 100+ circuits, 60 months, 4.9/5 across 85 reviews
+- NAME the brain chemical explicitly (cortisol, dopamine, serotonin, oxytocin, testosterone, endorphins)
+- MOTORSPORT BRIDGE: Where natural, use a racing analogy to make the business point land harder
+- NEVER use em dashes or en dashes. Use commas or full stops instead.
+- NEVER use ** or bullet symbols in the post body
+- No emojis in the value section. Occasional use in CTA is acceptable.
+- NEVER use generic coaching language: "mindset shift", "unlock your potential", "be your best self", "level up"
+- Short paragraphs (1-2 sentences), mobile-first formatting
+- End with an engagement question that drives comments ("When was the last time you noticed this?")
 
-VIDEO STRUCTURE (60 seconds, Manus slides + HeyGen avatar + ElevenLabs voice):
+LINKEDIN VERSION:
+- 200-400 words value content + CTA
+- Long-form text. Optimise for DWELL TIME and SAVES.
+- Direct link to Winning Formula assessment in CTA.
+- Include 3-5 professional hashtags at the end (#Leadership #CEO #MentalPerformance #FlowState #ExecutiveCoaching)
 
-1. HOOK SLIDE (seconds 1-5): One provocative statement in large text. Avatar says it aloud. Must stop the scroll.
-   Example: "Cortisol is shrinking your brain. Literally." or "Dopamine doesn't reward success. It rewards anticipation."
+DEAD ZONE RULES (never create these):
+- No self-promotional announcements without value
+- No testimonial-only posts without a teaching hook
+- No sequence posts that assume the reader saw yesterday's content
+- No generic motivational content that could apply to any coach
+- No pure neuroscience explainers without a business-specific anchor
 
-2. THE CHEMICAL (seconds 5-15): Name the specific brain chemical, what it does, and the one thing most people get wrong about it. One clean slide. Avatar narrates.
+Format your response as:
+=== LINKEDIN POST ===
+[LinkedIn post text here]
 
-3. THE INSIGHT (seconds 15-40): 2-3 slides with the key finding. Research source, specific data point, what it means for a business leader. Avatar narrates each slide.
+=== IMAGE TEXT ===
+[Suggest 1-2 lines of text for the image (max 12 words). This is for a bold data card visual. Use the hook data point or most powerful stat from the post.]`;
 
-4. THE BRIDGE (seconds 40-50): One slide connecting to the viewer's daily life. Direct, personal, specific. Avatar delivers looking at camera.
-
-5. ENGAGEMENT TRIGGER (seconds 50-60): Final slide with a question. Avatar asks it on camera. CTA as text overlay.
-
-SLIDE DESIGN: Clean, minimal. Dark backgrounds. Bold white/accent text. One key number or statement per slide. Camino branding.
-
-CRITICAL FOR ELEVENLABS: ALL numbers in the narration script MUST be written out as full text words:
-- "Two thousand two hundred and forty nine" NOT "2,249"
-- "Eighty one percent" NOT "81%"
-- "Nine point one one out of ten" NOT "9.11/10"
-- "Three hundred and twelve" NOT "312"
-` : ''}
-
-FOLLOW THE 6-STEP VIRAL FRAMEWORK EXACTLY:
-
-STEP 1 — THE WOW (first 2-3 lines):
-Start with a specific, surprising finding from the source article.${dataLayer?.anchor ? ' Weave in the Authority Anchor stat in the first two lines as a credibility signal.' : ''} Use the "three negatives before the reveal" pattern if applicable. This is the curiosity gap that makes people click "see more."
-
-STEP 2 — THE CREDIBILITY (next 3-4 short paragraphs):
-${dataLayer?.insight ? `Use the INSIGHT HOOK as the central topic. Unpack what "${dataLayer.insight.stat}" means, why it happens neurologically, and what it implies for business leaders.` : 'Name the brain chemical or neuroscience system. Name the researcher and institution. Explain what the mechanism does in practical terms.'} This generates DWELL TIME.
-
-STEP 3 — THE BRIDGE (1-2 paragraphs):
-${dataLayer?.bridgePattern ? `Use the ${dataLayer.bridgePattern.name} bridge pattern: "${dataLayer.bridgePattern.template}"` : '"Why does this matter if you\'re a CEO or founder in your 40s or 50s?"'} Connect it to board meetings, quarterly reviews, delegation, P&L. Include an "identity statement" they'll remember. Reframe the finding from scary to empowering.
-
-STEP 4 — THE AUTHORITY (1-2 sentences):
-Weave in the authority line and motorsport bridge naturally. "The leaders I work with, in motorsport and in business..." This line should feel personal and unmanufacturable.
-
-STEP 5 — THE ENGAGEMENT TRIGGER (1-2 sentences, BEFORE the CTA):
-⚠️ THIS IS THE MOST IMPORTANT STEP. The viral post MISSED this and got only 2 comments on 20,000 impressions.
-Write a PROVOCATIVE question or "tell me if this has happened to you" prompt that:
-- Forces the reader to reflect on their own specific experience
-- Cannot be answered with yes/no
-- Creates the urge to share their story in comments
-NEVER use generic triggers like "Does this resonate?", "What do you think?", "Agree or disagree?", "Thoughts?"
-GOOD examples: "Here's what I'm curious about. How many of your last 10 strategic decisions were made after 4pm, when your cortisol was already tanking?" / "Tell me this has happened to you. You block out 90 minutes for deep work, and within 11 minutes someone needs you urgently. Except it's never actually urgent."
-
-STEP 6 — THE CTA (after a blank line, completely unrelated):
-Use the provided CTA template. Must feel COMPLETELY separate from the value section. "With or without you" energy.
-
-FORMATTING RULES:
-- NEVER use em dashes, use commas or full stops instead
-- NEVER use ·· or ** or bullet symbols in the post body
-- 200-350 words total (value + CTA)
-- British English
-- No hashtags in body
-- 1-2 emojis max
-- No external links in post body (CTA link at end only)
-- Short paragraphs (1-2 sentences), mobile-first, line breaks between ideas
-- Write for DWELL TIME: 30+ seconds of reading
-- NEVER reveal specific methods, tools, or protocols (WOW not HOW)
-
-RETURN FORMAT: Return a JSON object with these fields:
-{
-  "postText": "The full LinkedIn post following all 6 steps above, ending with the CTA${isVideoDay ? ' (this is the POST CAPTION that accompanies the video on LinkedIn)' : ''}",
-  "alternativeHook": "A completely different Step 1 opening line that Craig could swap in",
-  "engagementTrigger": "The Step 5 engagement trigger you used, isolated so Craig can review and strengthen it",
-  "storyPrompt": "A specific suggestion for where Craig should inject a personal story. E.g. 'Replace the authority line with a real story about a CEO client who experienced this exact pattern last month' or 'Add a line about the specific rider at Phillip Island who...'",
-  "imageBrief": "A specific visual brief that MATCHES THE ACTUAL POST CONTENT (the main topic and WOW hook), NOT the data layer insight. The image should reinforce what the post is ABOUT. For DATA CARDS: specify the exact stat from the post's main topic, subtext, and source to display. For PADDOCK PHOTOS: suggest which type of paddock photo would reinforce this post's main theme (grid walk, debrief, pit lane, etc). For AI IMAGES: describe a neuroscience visualisation concept that matches the post's core topic. For TEXT QUOTE CARDS: write the exact quote from the post to display. For CAROUSEL DOCUMENTS: outline all 6-8 slide headlines matching the post content.",
-  "visualType": "The visual type assigned (data-card, paddock-photo, ai-image, text-quote, or carousel)"${isVideoDay ? `,
-  "videoScript": {
-    "hookLine": "The provocative statement for slide 1 (what appears on screen AND what avatar says first)",
-    "primaryChemical": "The brain chemical featured in this video (cortisol, dopamine, serotonin, oxytocin, testosterone, or endorphins)",
-    "slides": [
-      { "slideNumber": 1, "slideText": "Text that appears on the Manus slide", "narration": "What the avatar says for this slide, in natural SPOKEN English with all numbers written as full text words" },
-      { "slideNumber": 2, "slideText": "...", "narration": "..." },
-      { "slideNumber": 3, "slideText": "...", "narration": "..." },
-      { "slideNumber": 4, "slideText": "...", "narration": "..." },
-      { "slideNumber": 5, "slideText": "...", "narration": "..." }
-    ],
-    "closingQuestion": "The engagement question the avatar asks on the final slide"
-  }` : ''},
-  "dataLayerUsed": {
-    "anchor": "${dataLayer?.anchor?.id || 'none'}",
-    "insight": "${dataLayer?.insight?.id || 'none'}",
-    "bridgePattern": "${dataLayer?.bridgePattern?.id || 'none'}"
-  }
-}
-
-Return ONLY the JSON object.`;
-
-    return await callOpenAI(prompt, apiKey, model, true);
+    return await callClaude(prompt, apiKey, false);
 }
 
 // ─── Generate Multiple Posts in Parallel ──────────────────────
 export async function generatePosts(topics, config) {
-    const { pillars, frameworks, ctas, authorityLines, motorsportBridges, apiKey, model, campaignDays } = config;
+    const { pillars, frameworks, ctas, authorityLines, motorsportBridges, apiKey, campaignDays } = config;
 
-    // Reset data layer rotations for a fresh weekly batch
-    resetDataLayerRotations();
-    resetReviewRotations();
-
-    // Pre-assign data layers for all 7 posts
-    const dataLayers = topics.map((_, i) => getDataLayerForPost(i));
-
-    // Pre-assign review layers for all 7 posts
-    const reviewLayers = topics.map((_, i) => {
-        const languagePattern = getRotatingLanguagePattern();
-        // Give a case study to every other post (3-4 per week)
-        const caseStudy = (i % 2 === 0) ? getRotatingCaseStudy() : null;
-        // Social proof in CTA on first 2 eligible posts (Mon, Thu)
-        const useSocialProof = (i === 0 || i === 3) ? canUseSocialProof() : false;
-        return { languagePattern, caseStudy, useSocialProof };
-    });
-
-    // Generate posts SEQUENTIALLY with delay to avoid rate limits
-    const results = [];
-    for (let i = 0; i < topics.length; i++) {
-        // Add delay between posts (not before the first one)
-        if (i > 0) {
-            console.log(`⏳ Waiting 3s before post ${i + 1}/7 to avoid rate limits...`);
-            await new Promise(r => setTimeout(r, 3000));
-        }
-
-        let result;
-        try {
-            const val = await generatePost({
-                topic: topics[i],
-                pillar: pillars[i],
-                framework: frameworks[i],
-                cta: ctas[i],
-                authorityLine: authorityLines[i],
-                motorsportBridge: motorsportBridges ? motorsportBridges[i] : null,
-                apiKey,
-                model,
-                campaignDay: campaignDays ? campaignDays[i] : null,
-                dataLayer: dataLayers[i],
-                reviewLayer: reviewLayers[i],
-                contentDNA: WEEKLY_SCHEDULE[i] || null
-            });
-            result = { status: 'fulfilled', value: val };
-        } catch (err) {
-            result = { status: 'rejected', reason: err };
-        }
-
-        let content = '', alternativeHook = '', storyPrompt = '', imageBrief = '', engagementTrigger = '', dataLayerUsed = null, videoScript = null;
-        if (result.status === 'fulfilled') {
-            const val = result.value;
-            if (typeof val === 'object' && val.postText) {
-                content = val.postText;
-                alternativeHook = val.alternativeHook || '';
-                storyPrompt = val.storyPrompt || '';
-                imageBrief = typeof val.imageBrief === 'string' ? val.imageBrief : (val.imageBrief ? JSON.stringify(val.imageBrief) : '');
-                engagementTrigger = val.engagementTrigger || '';
-                dataLayerUsed = val.dataLayerUsed || dataLayers[i];
-                videoScript = val.videoScript || null;
-            } else if (typeof val === 'string') {
-                content = val;
-            } else {
-                content = JSON.stringify(val);
-            }
-        } else {
-            content = `Error generating post: ${result.reason}`;
-        }
-
-        const schedule = WEEKLY_SCHEDULE[i];
-        results.push({
-            id: `post-${Date.now()}-${i}`,
-            content,
-            alternativeHook,
-            storyPrompt,
-            imageBrief,
-            engagementTrigger,
-            dataLayerUsed: dataLayerUsed || dataLayers[i],
-            reviewLayerUsed: reviewLayers[i],
+    const promises = topics.map((topic, i) => {
+        return generatePost({
+            topic,
             pillar: pillars[i],
             framework: frameworks[i],
             cta: ctas[i],
             authorityLine: authorityLines[i],
             motorsportBridge: motorsportBridges ? motorsportBridges[i] : null,
-            topic: topics[i],
-            status: result.status,
-            imageUrl: '',
-            edited: false,
+            apiKey,
             campaignDay: campaignDays ? campaignDays[i] : null,
-            postFormat: schedule?.postFormat || 'text',
-            primaryChemical: schedule?.primaryChemical || null,
-            videoScript: videoScript
+            scheduleDay: WEEKLY_SCHEDULE[i] || null
         });
+    });
 
-        console.log(`✅ Post ${i + 1}/7 generated (${result.status})`);
-    }
+    const results = await Promise.allSettled(promises);
 
-    return results;
+    return results.map((result, i) => ({
+        id: `post-${Date.now()}-${i}`,
+        content: result.status === 'fulfilled' ? result.value : `Error generating post: ${result.reason}`,
+        pillar: pillars[i],
+        framework: frameworks[i],
+        cta: ctas[i],
+        authorityLine: authorityLines[i],
+        motorsportBridge: motorsportBridges ? motorsportBridges[i] : null,
+        topic: topics[i],
+        status: result.status,
+        imageUrl: '',
+        edited: false,
+        campaignDay: campaignDays ? campaignDays[i] : null
+    }));
 }
 
 // ─── Regenerate a Single Post ─────────────────────────────────
-export async function regeneratePost(post, apiKey, model = 'gpt-4o') {
-    const result = await generatePost({
+export async function regeneratePost(post, apiKey) {
+    const newContent = await generatePost({
         topic: post.topic,
         pillar: post.pillar,
         framework: post.framework,
@@ -839,188 +373,531 @@ export async function regeneratePost(post, apiKey, model = 'gpt-4o') {
         authorityLine: post.authorityLine,
         motorsportBridge: post.motorsportBridge,
         apiKey,
-        model,
         campaignDay: post.campaignDay
     });
-    if (typeof result === 'object' && result.postText) {
-        return { ...post, content: result.postText, alternativeHook: result.alternativeHook || '', engagementTrigger: result.engagementTrigger || '', storyPrompt: result.storyPrompt || '', imageBrief: result.imageBrief || '', edited: false };
-    }
-    return { ...post, content: typeof result === 'string' ? result : JSON.stringify(result), edited: false };
+    return { ...post, content: newContent, edited: false };
 }
 
-// ─── OpenAI API Call (with rate-limit retry) ──────────────────
-async function callOpenAI(prompt, apiKey, model = 'gpt-4o', parseJson = true) {
-    if (!apiKey) {
-        throw new Error('OpenAI API key not configured. Go to Settings to add your key.');
-    }
+// ─── Generate Video Script with Source Article as Backbone ────
+// The video script MUST reference the same source article as the text post.
+// Formula: Article hook → Named example → Brain chemistry explains why → Bridge to Camino data → CTA
+export async function generateVideoScript({ topic, chemicalId, pillar, postContent, videoLength = '45-60s', platform = 'LinkedIn Video', outputFormat = '9:16', apiKey }) {
 
-    const MAX_RETRIES = 3;
+    const chemContext = buildVideoScriptContext(chemicalId, typeof topic === 'string' ? topic : topic.headline || topic);
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 0.85,
-                max_tokens: 4096
-            })
-        });
+    // Extract the source article data from the full topic object
+    const sourceArticle = topic?.sourceArticle || '';
+    const articleUrl = topic?.articleUrl || '';
+    const headline = topic?.headline || (typeof topic === 'string' ? topic : 'Leadership mental performance');
+    const talkingPoints = topic?.talkingPoints || [];
+    const mechanism = topic?.mechanism || '';
+    const businessRelevance = topic?.businessRelevance || '';
+    const emotionalHook = topic?.emotionalHook || '';
+    const pillarName = pillar?.name || '';
+    const pillarDesc = pillar?.description || '';
 
-        // Handle rate limits with automatic retry
-        if (response.status === 429 && attempt < MAX_RETRIES) {
-            const error = await response.json().catch(() => ({}));
-            const errorMsg = error.error?.message || '';
-            // Try to extract wait time from error message (e.g. "Please try again in 9.474s")
-            const waitMatch = errorMsg.match(/try again in (\d+\.?\d*)/);
-            const waitSec = waitMatch ? Math.ceil(parseFloat(waitMatch[1])) + 2 : 12 * (attempt + 1);
-            console.log(`⏳ Rate limit hit. Waiting ${waitSec}s before retry ${attempt + 1}/${MAX_RETRIES}...`);
-            await new Promise(r => setTimeout(r, waitSec * 1000));
-            continue;
-        }
+    const prompt = `You are Craig Muirhead's video content strategist. Write a complete video script for a ${videoLength} HeyGen avatar video.
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.error?.message || `OpenAI API error: ${response.status}`);
-        }
+CRITICAL RULE — THE SOURCE ARTICLE IS THE BACKBONE OF THIS VIDEO:
+The video script MUST reference the same source article as the text post. The article provides the hook. It is the borrowed authority. It is the reason the viewer stops scrolling. The formula that generated 19,217 reach:
+1. HOOK: Open with the article's most compelling finding or the named person/study from the article
+2. SCENARIO: Use the article's story to paint the picture — name the person, the study, the specific finding
+3. SCIENCE: The neurochemistry layer EXPLAINS why the article's example works — this is Craig's unique interpretation
+4. BRIDGE: Connect the article's insight to Camino Coaching data (2,358 debriefs) and the viewer's experience
+5. CTA: Low-pressure, unrelated to the topic
 
-        const data = await response.json();
-        const content = data.choices[0]?.message?.content?.trim();
+The article is NOT optional background. It is the opening frame of the video. Third-party authority first, Craig's expertise second, the CTA last.
 
-        if (parseJson) {
-            try {
-                const arrayMatch = content.match(/\[[\s\S]*\]/);
-                if (arrayMatch) return JSON.parse(arrayMatch[0]);
-                const objMatch = content.match(/\{[\s\S]*\}/);
-                if (objMatch) return JSON.parse(objMatch[0]);
-                return JSON.parse(content);
-            } catch (e) {
-                throw new Error('Failed to parse AI response as JSON. Please try again.');
-            }
-        }
+SOURCE ARTICLE TO BUILD THE VIDEO AROUND:
+- Headline: ${headline}
+- Article: ${sourceArticle}
+${articleUrl ? `- URL: ${articleUrl}` : ''}
+${talkingPoints.length > 0 ? `- Key findings: ${talkingPoints.join(' | ')}` : ''}
+${mechanism ? `- Brain mechanism: ${mechanism}` : ''}
+${businessRelevance ? `- Business relevance: ${businessRelevance}` : ''}
+${emotionalHook ? `- Target emotion: ${emotionalHook}` : ''}
 
-        return content;
-    }
+CONTENT PILLAR: ${pillarName} — ${pillarDesc}
 
-    throw new Error('Rate limit exceeded after multiple retries. Please wait a minute and try again.');
+${postContent ? `THE TEXT POST (for alignment — the video must tell the same story through the same article):\n${postContent.substring(0, 800)}\n` : ''}
+
+PRODUCTION CONTEXT:
+- This video uses AI avatar (Craig's likeness) narrating over a Manus slide deck
+- Platform: ${platform}
+- Output format: ${outputFormat}
+- Target length: ${videoLength}
+
+${chemContext}
+
+RULES:
+- The HOOK must name the article's subject (the person, study, or finding) in the first sentence
+- The SCENARIO must use at least one named example FROM the article in the first 15 seconds
+- The neurochemical layer EXPLAINS the science behind the article's story — it does not replace it
+- UK English spelling throughout (colour, analyse, programme, favourite)
+- Use BUSINESS language: CEO, boardroom, strategic decision, quarterly review, board meeting, executive team, founder, scaling
+- Use MOTORSPORT BRIDGES where natural: connect the article's findings to both racing and business
+- Write numbers out in full text for voice synthesis (e.g., "two thousand three hundred and fifty eight" not "2,358")
+- WOW not HOW: Reveal the chemical and what it does. NEVER give the specific fix or programme methodology
+- Warm, direct, confident tone. Like a trusted advisor talking to a peer.
+- Keep each section tight. This is a ${videoLength} video, not an essay.
+
+FORMAT YOUR RESPONSE EXACTLY LIKE THIS:
+
+=== VIDEO SCRIPT ===
+HOOK (0-5s):
+[Open with the article's most compelling data point or named person. One sentence. This becomes the text overlay on Slide 1. The viewer must think "I need to hear this."]
+
+SCENARIO (5-15s):
+[Use the article's story. Name the person, the study, the specific finding. Then pivot: "Now think about your last [business scenario]." Make the leader feel the parallel.]
+
+THE SCIENCE (15-35s):
+[Name the chemical. Explain WHY the article's example works through neuroscience. One clear mechanism. This is Craig's unique interpretation — nobody else is connecting this article to this brain chemical.]
+
+THE COST (35-45s):
+[Quantify the impact. Use data from the article AND from Craig's debriefs. Decision quality, revenue, team performance. The gap between knowing and doing.]
+
+THE BRIDGE (45-55s):
+[Connect the article's insight to Camino Coaching data. "After two thousand two hundred and forty nine performance debriefs, the pattern is identical." Tease the solution. Never give the fix.]
+
+CTA (55-60s):
+[Casual, low-pressure. Winning Formula Assessment. "Oh, by the way" energy. Completely unrelated to the article topic.]
+
+=== SLIDE DECK BRIEF (FOR MANUS) ===
+Slide 1 — Hook: [Bold text referencing the article's subject. Max 15 words.]
+Slide 2 — The Story: [Key image/text from the article's finding. Max 15 words.]
+Slide 3 — The Chemical: [Chemical name in teal. One-line description.]
+Slide 4 — The Mechanism: [2-3 short bullet points of how it manifests in business.]
+Slide 5 — The Data: [One big stat from the article OR from Craig's data. Large number + short label.]
+Slide 6 — The Bridge: [Teaser line connecting the article to the viewer's experience.]
+Slide 7 — CTA: [Free Winning Formula Assessment + URL: caminocoaching.co.uk/leader-assessment]
+Slide 8 — End Card: [Camino Coaching branding. 4.9 Trustpilot · 120 five-star reviews.]
+
+=== HEYGEN NOTES ===
+[Avatar position, gesture suggestions, pace notes for this specific video.]
+
+=== SOCIAL CAPTION ===
+[A short LinkedIn caption to post alongside the video. Reference the article. 50-100 words. Include CTA and 3-5 hashtags.]`;
+
+    return await callClaude(prompt, apiKey, false);
 }
 
-// ─── OpenAI Responses API Call with Web Search ────────────────
-async function callOpenAIWithSearch(prompt, apiKey, parseJson = true) {
-    if (!apiKey) {
-        throw new Error('OpenAI API key not configured. Go to Settings to add your key.');
-    }
+// ─── Content Deduplication Storage ────────────────────────────────────────
+const DEDUP_ARTICLES_KEY = 'business-linkedin-used-articles';
+const DEDUP_HOOKS_KEY = 'business-linkedin-used-hooks';
 
+function getUsedArticleUrls() {
     try {
-        const response = await fetch('https://api.openai.com/v1/responses', {
+        return JSON.parse(localStorage.getItem(DEDUP_ARTICLES_KEY) || '[]');
+    } catch { return []; }
+}
+
+export function storeUsedArticles(topics) {
+    const existing = getUsedArticleUrls();
+    const newUrls = topics
+        .filter(t => t.articleUrl)
+        .map(t => ({ url: t.articleUrl, headline: t.headline, date: new Date().toISOString() }));
+    const combined = [...existing, ...newUrls].slice(-60);
+    localStorage.setItem(DEDUP_ARTICLES_KEY, JSON.stringify(combined));
+}
+
+function getUsedHooks() {
+    try {
+        return JSON.parse(localStorage.getItem(DEDUP_HOOKS_KEY) || '[]');
+    } catch { return []; }
+}
+
+export function storeUsedHooks(posts) {
+    const existing = getUsedHooks();
+    const newHooks = posts
+        .filter(p => p.content)
+        .map(p => (p.content || '').split('\n')[0]);
+    const combined = [...existing, ...newHooks].slice(-30);
+    localStorage.setItem(DEDUP_HOOKS_KEY, JSON.stringify(combined));
+}
+
+function buildDeduplicationContext() {
+    const usedUrls = getUsedArticleUrls();
+    const usedHooks = getUsedHooks();
+    let ctx = '';
+    if (usedUrls.length > 0) {
+        ctx += `\n\nDEDUPLICATION — DO NOT return any article from these previously used URLs:\n${usedUrls.map(a => a.url).join('\n')}\n`;
+    }
+    if (usedHooks.length > 0) {
+        ctx += `\n\nDEDUPLICATION — DO NOT repeat or closely paraphrase these previously used hooks:\n${usedHooks.join('\n')}\n`;
+    }
+    return ctx;
+}
+
+// ─── Claude API Call (Anthropic) — Content Writing ──────────────────
+async function callClaude(prompt, apiKey, parseJson = true) {
+    if (!apiKey) {
+        throw new Error('Claude API key not configured. Go to Settings to add your key.');
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 4096,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.85
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error?.message || `Claude API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.content?.[0]?.text?.trim();
+
+    if (!content) {
+        throw new Error('No content returned from Claude API.');
+    }
+
+    if (parseJson) {
+        try {
+            // Try to extract JSON array first (for topics, posts)
+            const arrayMatch = content.match(/\[[\s\S]*\]/);
+            if (arrayMatch) return JSON.parse(arrayMatch[0]);
+
+            // Try to extract JSON object (for emails, single responses)
+            const objectMatch = content.match(/\{[\s\S]*\}/);
+            if (objectMatch) return JSON.parse(objectMatch[0]);
+
+            // Try raw parse
+            return JSON.parse(content);
+        } catch (e) {
+            throw new Error('Failed to parse Claude response as JSON. Please try again.');
+        }
+    }
+
+    return content;
+}
+
+// ─── Gemini API Call with Google Search Grounding — Research ────
+async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
+    if (!apiKey) {
+        throw new Error('Gemini API key not configured. Go to Settings to add your key.');
+    }
+
+    const dedupPrompt = prompt + buildDeduplicationContext();
+
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'gpt-4o',
-                tools: [{ type: 'web_search_preview' }],
-                instructions: SYSTEM_PROMPT,
-                input: prompt
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            console.warn('Responses API failed, falling back to Chat Completions:', error.error?.message);
-            return await callOpenAI(prompt, apiKey, 'gpt-4o', parseJson);
-        }
-
-        const data = await response.json();
-
-        let content = '';
-        if (data.output && Array.isArray(data.output)) {
-            for (const item of data.output) {
-                if (item.type === 'message' && item.content) {
-                    for (const part of item.content) {
-                        if (part.type === 'output_text') {
-                            content += part.text;
-                        }
-                    }
+                contents: [{ parts: [{ text: dedupPrompt }] }],
+                tools: [{ google_search: {} }],
+                generationConfig: {
+                    temperature: 0.8,
+                    maxOutputTokens: 8192
                 }
-            }
+            })
         }
+    );
 
-        content = content.trim();
-
-        if (!content) {
-            console.warn('No text content in Responses API output, falling back');
-            return await callOpenAI(prompt, apiKey, 'gpt-4o', parseJson);
-        }
-
-        if (parseJson) {
-            try {
-                const jsonMatch = content.match(/\[[\s\S]*\]/);
-                return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
-            } catch (e) {
-                console.warn('JSON parse failed from web search response, falling back');
-                return await callOpenAI(prompt, apiKey, 'gpt-4o', parseJson);
-            }
-        }
-
-        return content;
-    } catch (err) {
-        console.warn('Web search call failed, falling back to standard API:', err.message);
-        return await callOpenAI(prompt, apiKey, 'gpt-4o', parseJson);
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error?.message || `Gemini API error: ${response.status}`);
     }
+
+    const data = await response.json();
+    console.log('[Gemini] Raw response:', JSON.stringify(data).substring(0, 500));
+
+    let content = '';
+    if (data.candidates?.[0]?.content?.parts) {
+        for (const part of data.candidates[0].content.parts) {
+            if (part.text) content += part.text;
+        }
+    }
+
+    // Strip markdown code fences if present
+    content = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+    if (!content) {
+        const blockReason = data.candidates?.[0]?.finishReason;
+        const safetyRatings = data.candidates?.[0]?.safetyRatings;
+        console.error('[Gemini] No content. Finish reason:', blockReason, 'Safety:', safetyRatings);
+        throw new Error(`No content from Gemini (reason: ${blockReason || 'unknown'}). Try again.`);
+    }
+
+    console.log('[Gemini] Parsed content preview:', content.substring(0, 200));
+
+    if (parseJson) {
+        try {
+            const jsonMatch = content.match(/\[[\s\S]*\]/);
+            return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+        } catch (e) {
+            console.error('[Gemini] JSON parse failed. Content:', content.substring(0, 500));
+            throw new Error('Failed to parse Gemini response as JSON. Try again.');
+        }
+    }
+
+    return content;
 }
 
-// ─── Generate Image Prompt (AI Image type only) ──────────────
+// ─── HeyGen Video Generation API ─────────────────────────────────────
+export async function generateHeyGenVideo({ script, avatarId, voiceId, apiKey }) {
+    if (!apiKey) {
+        throw new Error('HeyGen API key not configured. Go to Settings to add your key.');
+    }
+
+    // Parse the script sections into scenes
+    const sections = ['HOOK', 'SCENARIO', 'THE SCIENCE', 'THE COST', 'THE BRIDGE', 'CTA'];
+    const scenes = sections.map((section, i) => {
+        const regex = new RegExp(`${section}[^:]*:\\\\s*([\\\\s\\\\S]*?)(?=${sections[i + 1] ? sections[i + 1] : '==='}|$)`);
+        const match = script.match(regex);
+        const text = (match?.[1] || '').trim();
+        return {
+            scene_type: 'talking_photo',
+            character: {
+                type: 'avatar',
+                avatar_id: avatarId || 'default',
+                voice: { type: 'text', voice_id: voiceId || 'default', input_text: text }
+            },
+            background: { type: 'color', value: '#0A1628' }
+        };
+    }).filter(s => s.character.voice.input_text);
+
+    const response = await fetch('https://api.heygen.com/v2/video/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': apiKey
+        },
+        body: JSON.stringify({
+            video_inputs: scenes,
+            dimension: { width: 1080, height: 1920 }
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || `HeyGen API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data?.video_id || data.video_id;
+}
+
+// ─── HeyGen Video Status Check ───────────────────────────────────────
+export async function checkHeyGenVideoStatus(videoId, apiKey) {
+    const response = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {
+        headers: { 'X-Api-Key': apiKey }
+    });
+
+    if (!response.ok) {
+        throw new Error(`HeyGen status check failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+        status: data.data?.status || 'unknown',
+        videoUrl: data.data?.video_url || null,
+        thumbnailUrl: data.data?.thumbnail_url || null
+    };
+}
+
+// ─── Generate Email Copy (Claude) ─────────────────────────────
+export async function generateEmail({ topic, pillar, cta, postContent, apiKey }) {
+    const prompt = `You are Craig Muirhead, writing a short nurture email to your list of business leaders and CEOs.
+
+TOPIC: ${topic?.headline || topic || 'Mental performance in business leadership'}
+PILLAR: ${pillar?.name || 'Mental Performance'} — ${pillar?.description || ''}
+CTA: ${cta?.name || 'Winning Formula Assessment'} — Trigger: Take the free assessment
+
+${postContent ? `RELATED SOCIAL POST (for context — do NOT copy this word-for-word, use it as inspiration for the email angle):\n${postContent.substring(0, 500)}\n` : ''}
+
+Write a SHORT nurture email. This is NOT a newsletter — it's a punchy, personal email from Craig.
+
+RULES:
+- UK English throughout
+- Use business leadership language (not motorcycle-specific, but motorsport BRIDGES are welcome)
+- WOW not HOW: reveal the problem and neuroscience, NEVER the methodology
+- Maximum 200 words body (short, punchy, value-dense)
+- Write like you're talking to a trusted peer — direct, no fluff
+- Include a specific business scenario or data point
+- End with a clear CTA that links to the Winning Formula Assessment
+
+OUTPUT FORMAT (return as JSON):
+{
+  "subject": "Email subject line (max 50 chars, curiosity-driven, lowercase feel)",
+  "preheader": "Preview text (max 80 chars, complements subject)",
+  "hook": "Opening line — punchy, scenario-based, stops the scroll (1-2 sentences)",
+  "problem": "The problem/neuroscience angle (2-3 sentences, include a data point or stat)",
+  "bridge": "The 'what if' bridge — teases the solution without giving it away (1-2 sentences)",
+  "ctaText": "CTA button text (max 5 words, action-oriented)",
+  "ctaUrl": "${cta?.url || 'https://caminocoaching.co.uk/leader-assessment'}",
+  "signoff": "Short sign-off line before the name (1 sentence, personal)"
+}
+
+Return ONLY the JSON object. No markdown, no code fences.`;
+
+    const result = await callClaude(prompt, apiKey, true);
+
+    if (Array.isArray(result)) {
+        return result[0];
+    }
+    return result;
+}
+
+// ─── Render Email as GHL-Compatible HTML ─────────────────────
+export function renderEmailHTML(emailData, pillar) {
+    const {
+        subject = 'Something for your Monday...',
+        preheader = '',
+        hook = '',
+        problem = '',
+        bridge = '',
+        ctaText = 'Take the Free Assessment',
+        ctaUrl = 'https://caminocoaching.co.uk/leader-assessment',
+        signoff = 'Speak soon'
+    } = emailData;
+
+    const pillarColor = pillar?.color || '#00BFA5';
+
+    return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>${subject}</title>
+<!--[if !mso]><!-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+</style>
+<!--<![endif]-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { margin: 0; padding: 0; background-color: #0D1117; font-family: 'Inter', Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { display: block; outline: none; text-decoration: none; border: 0; }
+  a { color: #00BFA5; text-decoration: none; }
+  @media only screen and (max-width: 620px) {
+    .container { width: 100% !important; padding: 0 16px !important; }
+    .content { padding: 28px 20px !important; }
+    .cta-btn { display: block !important; text-align: center !important; }
+    h1 { font-size: 22px !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#0D1117;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}</div>
+
+<!-- Wrapper -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0D1117;">
+<tr><td align="center" style="padding:24px 0;">
+
+<!-- Container -->
+<table role="presentation" class="container" width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;">
+
+<!-- Header Bar -->
+<tr><td style="padding:0 0 2px 0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="background:linear-gradient(90deg,${pillarColor},#00BFA5);height:4px;border-radius:4px 4px 0 0;"></td>
+    </tr>
+  </table>
+</td></tr>
+
+<!-- Main Content Card -->
+<tr><td class="content" style="background-color:#0A1628;padding:36px 32px;border-radius:0 0 8px 8px;">
+
+  <!-- Logo/Brand -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <span style="font-size:13px;font-weight:700;color:#00BFA5;letter-spacing:1.5px;text-transform:uppercase;">CAMINO COACHING</span>
+    </td></tr>
+  </table>
+
+  <!-- Hook -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:28px 0 0 0;">
+      <h1 style="font-size:24px;font-weight:700;color:#F0F6FC;line-height:1.3;margin:0;">${hook}</h1>
+    </td></tr>
+  </table>
+
+  <!-- Problem/Science -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:20px 0 0 0;">
+      <p style="font-size:15px;line-height:1.65;color:#B0BAC5;margin:0;">${problem}</p>
+    </td></tr>
+  </table>
+
+  <!-- Bridge -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:20px 0 0 0;">
+      <p style="font-size:15px;line-height:1.65;color:#D1D5DB;font-weight:600;margin:0;font-style:italic;">${bridge}</p>
+    </td></tr>
+  </table>
+
+  <!-- CTA Button -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:28px 0 0 0;" align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr><td class="cta-btn" style="background-color:#00BFA5;border-radius:6px;padding:14px 32px;">
+          <a href="${ctaUrl}" target="_blank" style="color:#0A1628;font-size:15px;font-weight:700;text-decoration:none;display:inline-block;letter-spacing:0.5px;">${ctaText}</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+
+  <!-- Sign-off -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="padding:28px 0 0 0;border-top:1px solid rgba(255,255,255,0.06);margin-top:28px;">
+      <p style="font-size:14px;line-height:1.5;color:#8B949E;margin:0 0 4px 0;">${signoff}</p>
+      <p style="font-size:14px;font-weight:700;color:#F0F6FC;margin:0;">Craig Muirhead</p>
+      <p style="font-size:12px;color:#00BFA5;margin:2px 0 0 0;">Camino Coaching — Leadership Mental Performance</p>
+    </td></tr>
+  </table>
+
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="padding:20px 0 0 0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:12px 0;">
+      <p style="font-size:11px;color:#484F58;margin:0;">
+        You're receiving this because you signed up for leadership performance insights.
+        <br><a href="{{unsubscribe_link}}" style="color:#484F58;text-decoration:underline;">Unsubscribe</a> · <a href="{{preferences_link}}" style="color:#484F58;text-decoration:underline;">Email preferences</a>
+      </p>
+      <p style="font-size:11px;color:#30363D;margin:8px 0 0 0;">
+        © ${new Date().getFullYear()} Camino Coaching · caminocoaching.co.uk
+      </p>
+    </td></tr>
+  </table>
+</td></tr>
+
+</table>
+<!-- /Container -->
+
+</td></tr>
+</table>
+<!-- /Wrapper -->
+
+</body>
+</html>`;
+}
+
+// ─── Generate Image Prompt ───────────────────────────────────
 export function generateImagePrompt(post) {
-    const pillarId = post.pillar?.id || 'hidden-cost';
-    const aiPrompt = AI_IMAGE_PROMPTS[pillarId];
-    if (aiPrompt) return aiPrompt;
-    return `Abstract neuroscience visualisation related to "${post.pillar.name}". ${post.pillar.description}. Dark background, bioluminescent neural effects, medical illustration style. No text, no logos. Square 1:1 format.`;
-}
-
-// ─── Get Visual Type Info for a Post ─────────────────────────
-export function getVisualTypeForDay(dayIndex) {
-    const schedule = WEEKLY_SCHEDULE[dayIndex];
-    if (!schedule || !schedule.visualType) return VISUAL_TYPES['data-card'];
-    return VISUAL_TYPES[schedule.visualType] || VISUAL_TYPES['data-card'];
-}
-
-// ─── Get Visual Guidance for a Post ──────────────────────────
-export function getVisualGuidance(post, dayIndex) {
-    const visualType = getVisualTypeForDay(dayIndex);
-    const pillarId = post.pillar?.id;
-
-    switch (visualType.id) {
-        case 'data-card': {
-            const template = DATA_CARD_TEMPLATES[pillarId];
-            return template
-                ? `📊 DATA CARD: "${template.stat}" — ${template.subtext} (Source: ${template.source}). Use accent colour ${template.accentColor}. Dark navy background, Inter Bold, 1080×1080px.`
-                : visualType.guidance;
-        }
-        case 'paddock-photo':
-            return `🏎️ PADDOCK PHOTO: Find a real photo from your archive that connects to "${post.pillar.name}". Grid walk, debrief, pit lane — authenticity beats polish.`;
-        case 'ai-image': {
-            const aiPrompt = AI_IMAGE_PROMPTS[pillarId];
-            return aiPrompt
-                ? `🤖 AI IMAGE: ${aiPrompt}`
-                : visualType.guidance;
-        }
-        case 'text-quote': {
-            const quotes = TEXT_QUOTE_TEMPLATES;
-            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-            return `💬 TEXT QUOTE CARD: "${randomQuote}" — clean branded dark background, Inter Bold, your words only.`;
-        }
-        case 'carousel':
-            return `📑 CAROUSEL DOCUMENT: Break this post's data story into 6-8 slides. Slide 1 = hook with key stat. Slides 2-7 = one finding per slide. Slide 8 = bridge to business + CTA. Export as PDF.`;
-        default:
-            return visualType.guidance;
-    }
+    return `Create a professional, editorial-quality business leadership photograph for a LinkedIn post about "${post.pillar.name}".
+    Style: Photorealistic, shot on Canon EOS R5, 85mm f/1.4 lens, shallow depth of field, natural lighting, 8K resolution.
+    Setting: Modern office, boardroom, executive suite, contemporary workspace — authentic professional environment.
+    Theme: ${post.pillar.description}.
+    Mood: Professional, strategic, high-performance. The leadership experience.
+    No text overlay. No watermark. No logos. No writing on image. No identifiable faces.
+    Square format (1:1) for social media.`;
 }

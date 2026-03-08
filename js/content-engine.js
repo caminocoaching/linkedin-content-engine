@@ -91,7 +91,7 @@ export const PILLARS = [
     name: 'Camino Data Insight',
     icon: '📊',
     color: '#4dabf7',
-    description: 'A specific finding from Camino Coaching\'s proprietary dataset of 2,249 performance debriefs across 312 circuits over 57 months. NO web search needed.',
+    description: 'A specific finding from Camino Coaching\'s proprietary dataset of 2,358 performance debriefs across 100+ circuits over 60 months. NO web search needed.',
     winningFormulaPillar: 'Feedback & Debrief Loops',
     searchCategory: 'NO external search — proprietary data only.',
     emotionalTarget: 'This data is unique. Nobody else has this. And it applies directly to my leadership.',
@@ -272,7 +272,7 @@ export const VISUAL_TYPES = {
     color: '#4dabf7',
     frequency: '2-3 per week',
     description: 'Dark background, one headline number, your branding. Build in Canva — swap numbers weekly.',
-    guidance: 'Dark navy background (#06080e). Single bold stat in pillar accent colour. Inter Bold font. 1080×1080px square. Subtle ⚡ Camino Coaching bottom-right. Example: "699 PERSONAL BESTS. 2,249 DEBRIEFS. 57 MONTHS." or "CONFIDENCE 8.5+/10 = 2.7x MORE PERSONAL BESTS."',
+    guidance: 'Dark navy background (#06080e). Single bold stat in pillar accent colour. Inter Bold font. 1080×1080px square. Subtle ⚡ Camino Coaching bottom-right. Example: "808 PERSONAL BESTS. 2,358 DEBRIEFS. 60 MONTHS." or "CONFIDENCE 8.5+/10 = 2.7x MORE PERSONAL BESTS."',
     tool: 'Canva (template, swap numbers each week — 2 minutes per card)'
   },
   'paddock-photo': {
@@ -312,7 +312,7 @@ export const VISUAL_TYPES = {
     color: '#ff6b9d',
     frequency: '1 per week',
     description: 'LinkedIn algorithm loves document posts — highest engagement rates. 6-8 slides breaking down a data story.',
-    guidance: 'Slide 1: Hook ("We tracked 2,249 debriefs. Here is what separates the winners."). Slides 2-7: One key finding per slide with clean data visuals. Slide 8: Bridge to business + CTA. Upload as PDF to LinkedIn. Gets saved, gets shared, generates maximum dwell time.',
+    guidance: 'Slide 1: Hook ("We tracked 2,358 debriefs. Here is what separates the winners."). Slides 2-7: One key finding per slide with clean data visuals. Slide 8: Bridge to business + CTA. Upload as PDF to LinkedIn. Gets saved, gets shared, generates maximum dwell time.',
     tool: 'Canva (presentation template) or Google Slides → export PDF'
   }
 };
@@ -344,7 +344,7 @@ export const WEEKLY_SCHEDULE = [
     contentType: 'hidden-cost',
     researchCategory: 'cost-post',
     searchMandate: 'Find ONE alarming external study about cognitive damage, cortisol, burnout, chronic stress, or decision fatigue from a named university or publication. This is the ONLY problem/cost post this week. Rotate through the 7 sub-topics (multitasking, always-on, open-door, decision bottleneck, routine stagnation, purpose disconnection, grind delusion) cycling weekly.',
-    searchFocus: 'workplace productivity research, cognitive decline studies, stress impact data, decision fatigue research, burnout statistics',
+    searchFocus: 'workplace productivity research, cognitive decline studies, stress impact data, decision fatigue research, burnout statistics, Whoop HRV burnout data, Oura Ring sleep deprivation CEO studies, Apple Watch stress detection executives, Garmin Body Battery energy depletion patterns',
     dayBrief: 'The hidden cost post. VIDEO FORMAT. Scary stat as 60-second explainer. Cortisol-led. The ONLY negative post this week. Emotional target: "That is costing me more than I realised."'
   },
   {
@@ -361,7 +361,7 @@ export const WEEKLY_SCHEDULE = [
     contentType: 'brain-breakthrough',
     researchCategory: 'breakthroughs',
     searchMandate: 'Find a POSITIVE neuroscience breakthrough — research showing the brain can do something previously thought impossible. Neuroplasticity, cognitive enhancement, longevity. This is the viral post formula (19,845 impressions): possibility, not problems.',
-    searchFocus: 'neuroplasticity breakthroughs, cognitive aging reversal, brain training discoveries, acetylcholine dopamine serotonin research',
+    searchFocus: 'neuroplasticity breakthroughs, cognitive aging reversal, brain training discoveries, acetylcholine dopamine serotonin research, Apple Watch health innovations 2025 2026, Oura Ring circadian rhythm discoveries, Garmin advanced HRV metrics research, wearable biometric cognitive performance studies',
     dayBrief: 'Brain breakthrough. VIDEO FORMAT. Neuroscience discovery as viral video. POSITIVE. Emotional target: "I had no idea the brain could do that."'
   },
   {
@@ -394,7 +394,7 @@ export const WEEKLY_SCHEDULE = [
     evidenceType: 'proprietary-data',
     contentType: 'camino-data-insight',
     researchCategory: 'camino-data-wins',
-    searchMandate: 'DO NOT search externally. Use ONLY Craig\'s proprietary data from 2,249 debriefs. ONE authority anchor + ONE insight hook + ONE bridge pattern. WOW not HOW.',
+    searchMandate: 'DO NOT search externally. Use ONLY Craig\'s proprietary data from 2,358 debriefs. ONE authority anchor + ONE insight hook + ONE bridge pattern. WOW not HOW.',
     searchFocus: 'NO external search — proprietary data only: confidence 2.7x, 81% box breathing, centering gap, flow improvements, win rate correlations',
     dayBrief: 'Camino Data Insight. VIDEO FORMAT. Proprietary data visualised with avatar narration. POSITIVE. Emotional target: "This data is unique. Nobody else has this."'
   },
@@ -412,7 +412,7 @@ export const WEEKLY_SCHEDULE = [
     contentType: 'positive-edge',
     researchCategory: 'positive-performance-data',
     searchMandate: 'Find research showing what WORKS and what high performers DO differently. McKinsey flow 500%, exercise BDNF, sleep executive function, meditation prefrontal cortex, cold exposure norepinephrine. Lead with the positive outcome, NEVER the problem.',
-    searchFocus: 'flow state productivity McKinsey, exercise brain BDNF, sleep executive function, meditation prefrontal cortex, walking creativity Stanford',
+    searchFocus: 'flow state productivity McKinsey, exercise brain BDNF, sleep executive function, meditation prefrontal cortex, walking creativity Stanford, Whoop recovery score performance correlation, Oura Ring readiness score studies, Garmin training load executive stamina, Apple Watch mindfulness heart coherence, GoPro flow state extreme sport documentation',
     dayBrief: 'The Positive Edge. TEXT POST with AI image or strong visual. POSITIVE. Emotional target: "I want that edge. And it is more accessible than I thought."'
   },
   {
@@ -429,7 +429,7 @@ export const WEEKLY_SCHEDULE = [
     contentType: 'give-the-tool',
     researchCategory: 'actionable-tools',
     searchMandate: 'DO NOT search for problems. GIVE one specific actionable technique the reader can use immediately, backed by data. Give the tool. Hold back the full system. Rotate through: box breathing, 2-min pre-meeting reset, 90-min focus block, post-decision debrief, evening wind-down, strategic walking, Monday clarity exercise.',
-    searchFocus: 'breathing protocols, focus techniques, decision frameworks, recovery strategies, preparation routines — with neuroscience backing',
+    searchFocus: 'breathing protocols, focus techniques, decision frameworks, recovery strategies, preparation routines — with neuroscience backing, Whoop Journal biometric correlations, Oura Ring sleep staging optimisation, Garmin stress tracking protocols, Apple Watch HRV biofeedback techniques, wearable-guided recovery routines',
     dayBrief: 'The Tool. VIDEO FORMAT. Teaching technique with "try this with me" format. POSITIVE. Emotional target: "I can try this today. This person gives real value for free."'
   },
   {
@@ -537,16 +537,16 @@ export const VIDEO_STRUCTURE = {
   ],
   slideDesign: 'Clean, minimal design. Dark backgrounds with bold white/accent text. One key number or statement per slide. Camino branding consistent across all slides. No clutter.',
   avatarPosition: 'Circle overlay in bottom-right corner.',
-  elevenLabsRule: 'All numbers in the narration script must be written out in full text, not numerals. "Two thousand two hundred and forty nine" not "2,249". "Eighty one percent" not "81%".'
+  elevenLabsRule: 'All numbers in the narration script must be written out in full text, not numerals. "Two thousand three hundred and fifty eight" not "2,358". "Eighty one percent" not "81%".'
 };
 
 
 export const AUTHORITY_LINES = [
   'After 10 seasons embedded in elite motorsport paddocks, from F1 pit lanes to F4 garages, I have seen this same pattern in the boardroom too.',
   '25 years in corporate management, from BMW Dubai to Swiss private equity, taught me what the textbooks leave out about performance under pressure.',
-  'Working with athletes across 312 circuits worldwide, plus CEOs running £10M+ businesses, the data on this is remarkably consistent.',
-  'Pattern recognition across 2,249 performance debriefs, 699 personal bests, and 394 podiums showed me something that applies to every leader I work with.',
-  '2,249 performance debriefs across 57 months, tracking everything from heart rate to decision quality, reveal the same bottleneck every time.'
+  'Working with athletes across 100+ circuits worldwide, plus CEOs running £10M+ businesses, the data on this is remarkably consistent.',
+  'Pattern recognition across 2,358 performance debriefs, 808 personal bests, and 438 podiums showed me something that applies to every leader I work with.',
+  '2,358 performance debriefs across 60 months, tracking everything from heart rate to decision quality, reveal the same bottleneck every time.'
 ];
 
 // ─── Business Case Studies ───────────────────────────────────
@@ -826,7 +826,7 @@ export const DATA_CARD_TEMPLATES = {
   'hidden-cost': { stat: '683 HOURS', subtext: 'of productive time lost every year to interruption recovery.', source: 'University of California research', accentColor: '#e84444' },
   'brain-breakthrough': { stat: 'REVERSIBLE', subtext: 'Cognitive aging can be reversed by a decade with targeted brain exercises.', source: 'NIH-funded research', accentColor: '#ff6b35' },
   'human-achievement': { stat: '5,127', subtext: 'failed prototypes before Dyson got it right. Neuroplasticity in action.', source: 'James Dyson', accentColor: '#ffd43b' },
-  'camino-data': { stat: '2.7x', subtext: 'more personal bests when confidence is 8.5+/10.', source: '2,249 performance debriefs', accentColor: '#4dabf7' },
+  'camino-data': { stat: '2.7x', subtext: 'more personal bests when confidence is 8.5+/10.', source: '2,358 performance debriefs', accentColor: '#4dabf7' },
   'positive-edge': { stat: '500%', subtext: 'more productive. Executives in flow state. McKinsey measured it.', source: 'McKinsey research', accentColor: '#9775fa' },
   'the-tool': { stat: '81%', subtext: 'of successful sessions start with box breathing. 2 minutes. Free.', source: 'Camino Coaching data', accentColor: '#69db7c' },
   'winning-ways': { stat: '20%', subtext: 'of work time at Google produces 50% of their best innovations.', source: 'Google internal data', accentColor: '#f783ac' }
@@ -846,7 +846,7 @@ export const TEXT_QUOTE_TEMPLATES = [
 // ═══════════════════════════════════════════════════════════════
 // 📊 PROPRIETARY DATA REPORT — THREE-LAYER SYSTEM
 // Source: Camino Coaching Performance Debrief Data Report
-// 2,249 debriefs across 57 months
+// 2,358 debriefs across 60 months
 // ═══════════════════════════════════════════════════════════════
 
 // ─── LAYER 1: HEADLINE AUTHORITY ANCHORS ──────────────────────
@@ -856,45 +856,52 @@ export const TEXT_QUOTE_TEMPLATES = [
 export const AUTHORITY_ANCHORS = [
   {
     id: 'anchor-debriefs',
-    stat: '2,249',
-    label: 'performance debriefs',
-    fullLine: 'After tracking 2,249 performance debriefs across 57 months, one pattern keeps appearing...',
+    stat: '2,358',
+    label: 'Performance Debriefs',
+    fullLine: 'After tracking 2,358 performance debriefs across 60 months, one pattern keeps appearing...',
     category: 'volume'
   },
   {
     id: 'anchor-circuits',
-    stat: '312',
+    stat: '100+',
     label: 'circuits worldwide',
-    fullLine: 'Across 312 circuits, from MotoGP paddocks to F4 garages, the data tells the same story.',
+    fullLine: 'Across 100+ circuits, from MotoGP paddocks to F4 garages, the data tells the same story.',
     category: 'breadth'
   },
   {
     id: 'anchor-months',
-    stat: '57',
+    stat: '60',
     label: 'months of continuous data',
-    fullLine: '57 months of continuous performance data. Not theory. Not opinion. Measured outcomes.',
+    fullLine: '60 months of continuous performance data. Not theory. Not opinion. Measured outcomes.',
     category: 'duration'
   },
   {
     id: 'anchor-pbs',
-    stat: '699',
-    label: 'personal bests recorded',
-    fullLine: '699 personal bests. Each one preceded by a pattern the athlete was not even aware of.',
+    stat: '808',
+    label: 'Personal Bests',
+    fullLine: '808 personal bests. Each one preceded by a pattern the athlete was not even aware of.',
     category: 'results'
   },
   {
     id: 'anchor-podiums',
-    stat: '394',
+    stat: '438',
     label: 'podium finishes',
-    fullLine: 'What do 394 podium finishes have in common? It is not talent. It is preparation protocol.',
+    fullLine: 'What do 438 podium finishes have in common? It is not talent. It is preparation protocol.',
     category: 'results'
   },
   {
     id: 'anchor-wins',
-    stat: '138',
+    stat: '159',
     label: 'race wins',
-    fullLine: '138 race wins. The mental state before each one was virtually identical. That is not coincidence.',
+    fullLine: '159 race wins. The mental state before each one was virtually identical. That is not coincidence.',
     category: 'results'
+  },
+  {
+    id: 'anchor-racers',
+    stat: '155',
+    label: 'racers coached',
+    fullLine: '155 racers. From MotoGP paddocks to club-level grids. The mental patterns that separate them are identical.',
+    category: 'breadth'
   }
 ];
 
@@ -1068,11 +1075,11 @@ export function getDataLayerForPost(dayIndex) {
 export const SOCIAL_PROOF = {
   trustpilot: {
     rating: '4.9/5',
-    totalReviews: 84,
+    totalReviews: 85,
     fiveStarPercent: '100%',
     url: 'https://uk.trustpilot.com/review/caminocoaching.co.uk',
-    ctaLine: '4.9/5 on Trustpilot. 84 reviews. 100% five-star.',
-    shortLine: '84 five-star Trustpilot reviews'
+    ctaLine: '4.9/5 across 85 reviews. 100% five-star.',
+    shortLine: '85 five-star reviews'
   }
 };
 
