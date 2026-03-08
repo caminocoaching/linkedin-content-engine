@@ -2118,11 +2118,11 @@ body::before {
    PRODUCTION KIT — Inline Email + Video after "Written" tick
    ═══════════════════════════════════════════════════════════════ */
 
-.post-written {
+.post-confirmed {
   border-color: rgba(46, 160, 67, 0.25) !important;
 }
 
-.post-written .post-card-header {
+.post-confirmed .post-card-header {
   border-bottom-color: rgba(46, 160, 67, 0.12);
 }
 

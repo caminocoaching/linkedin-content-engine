@@ -17,7 +17,7 @@ import {
 
 import {
     generateTopics, generatePost, generatePosts, regeneratePost, generateImagePrompt,
-    generateVideoScript, storeUsedArticles, storeUsedHooks,
+    generateVideoScript, adaptPostForPlatforms, storeUsedArticles, storeUsedHooks,
     generateEmail, renderEmailHTML
 } from './ai-service.js';
 
@@ -399,19 +399,19 @@ function renderPosts() {
         const date = dates[i];
         const wordCount = (post.content || '').split(/\s+/).filter(w => w).length;
 
-        // Parse LinkedIn content (single platform — no FB/IG split)
         let postContent = post.content || '';
-        // Strip === LINKEDIN POST === header if present
         const linkedInMatch = postContent.match(/=== LINKEDIN POST ===\s*([\s\S]*?)(?:=== IMAGE TEXT ===|$)/);
-        if (linkedInMatch) {
-            postContent = linkedInMatch[1].trim();
-        }
+        if (linkedInMatch) postContent = linkedInMatch[1].trim();
 
         const chem = state.stories[i]?.chemical || {};
-        const isWritten = post.written || false;
+        const isConfirmed = post.confirmed || false;
+        const isEditing = post.editing || false;
+        const topic = state.topics[i] || post.topic || {};
+        const sourceArticle = topic.sourceArticle || topic.source || '';
+        const articleUrl = topic.articleUrl || '';
 
         return `
-      <div class="post-card ${isWritten ? 'post-written' : ''}" id="post-card-${i}" data-index="${i}">
+      <div class="post-card ${isConfirmed ? 'post-confirmed' : ''}" id="post-card-${i}" data-index="${i}">
         <div class="post-card-header">
           <div class="post-card-header-left">
             <span class="post-number">${i + 1}</span>
@@ -428,31 +428,85 @@ function renderPosts() {
           </div>
         </div>
 
-        <div class="post-content" id="post-content-${i}">${escapeHtml(postContent)}</div>
+        ${sourceArticle ? `
+        <div class="source-article-bar" style="padding:0.4rem 1.25rem;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.72rem;display:flex;align-items:center;gap:0.4rem;">
+          <span style="color:var(--text-muted);">📰 Source:</span>
+          ${articleUrl
+                    ? `<a href="${escapeHtml(articleUrl)}" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">${escapeHtml(sourceArticle)}</a>`
+                    : `<span style="color:var(--text-secondary);font-weight:600;">${escapeHtml(sourceArticle)}</span>`
+                }
+        </div>` : ''}
+
+        ${isEditing
+                ? `<textarea class="post-edit-area" id="post-edit-${i}" rows="14" style="width:100%;padding:1rem 1.25rem;background:#0D1117;border:none;border-top:1px solid rgba(0,191,165,0.2);border-bottom:1px solid rgba(0,191,165,0.2);color:var(--text-primary);font-family:var(--font);font-size:0.85rem;line-height:1.65;resize:vertical;outline:none;">${escapeHtml(postContent)}</textarea>`
+                : `<div class="post-content" id="post-content-${i}">${escapeHtml(postContent)}</div>`
+            }
 
         <div class="post-card-footer">
           <div class="post-meta">
             <span class="word-count">${wordCount} words</span>
+            ${isConfirmed ? '<span style="color:var(--green);font-size:0.7rem;font-weight:600;">✅ Confirmed</span>' : ''}
           </div>
           <div class="post-actions">
-            <button class="post-action-btn" onclick="window.appActions.copyPost(${i})">📋 Copy</button>
-            <button class="post-action-btn" onclick="window.appActions.downloadPost(${i})">💾 .txt</button>
-            <button class="post-action-btn" onclick="window.appActions.regenPost(${i})">🔄 Regen</button>
-            <label class="written-checkbox" style="display:inline-flex;align-items:center;gap:0.35rem;cursor:pointer;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.75rem;font-weight:700;transition:all 0.2s;${isWritten ? 'background:rgba(46,160,67,0.15);color:var(--green,#2EA043);border:1px solid rgba(46,160,67,0.3);' : 'background:rgba(255,255,255,0.04);color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);'}">
-              <input type="checkbox" ${isWritten ? 'checked' : ''} onchange="window.appActions.markWritten(${i}, this.checked)" style="accent-color:var(--green,#2EA043);cursor:pointer;" />
-              ${isWritten ? '✅ Written' : 'Mark Written'}
-            </label>
+            ${!isConfirmed ? `
+              <button class="post-action-btn" onclick="window.appActions.copyPost(${i})">📋 Copy</button>
+              <button class="post-action-btn" onclick="window.appActions.regenPost(${i})">🔄 Regen</button>
+              ${isEditing
+                    ? `<button class="post-action-btn" onclick="window.appActions.saveEdit(${i})" style="color:var(--neuro-teal);font-weight:700;">💾 Save</button>
+                   <button class="post-action-btn" onclick="window.appActions.cancelEdit(${i})">✕ Cancel</button>`
+                    : `<button class="post-action-btn" onclick="window.appActions.editPost(${i})" style="color:var(--text-muted);">✏️ Edit</button>`
+                }
+              <button class="post-action-btn" onclick="window.appActions.confirmPost(${i})" style="background:rgba(46,160,67,0.12);color:var(--green,#2EA043);border:1px solid rgba(46,160,67,0.2);border-radius:6px;font-weight:700;">✅ Confirm</button>
+            ` : `
+              <button class="post-action-btn" onclick="window.appActions.copyPost(${i})">📋 LinkedIn</button>
+              <button class="post-action-btn" onclick="window.appActions.copyFacebook(${i})" style="color:#1877F2;">📋 Facebook</button>
+              <button class="post-action-btn" onclick="window.appActions.copyInstagram(${i})" style="color:#E1306C;">📋 Instagram</button>
+              <button class="post-action-btn" onclick="window.appActions.unconfirmPost(${i})" style="color:var(--text-muted);font-size:0.65rem;">↩ Edit</button>
+            `}
           </div>
         </div>
 
-        <!-- Inline production kit (appears after Written is ticked) -->
-        <div id="production-kit-${i}" class="production-kit" style="display:${isWritten ? 'block' : 'none'};">
-          ${post.emailHTML ? renderInlineEmail(post, i) : `<div id="email-slot-${i}" class="production-slot"><span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Generating email...</div>`}
-          ${post.videoNarration ? renderInlineVideo(post, i) : `<div id="video-slot-${i}" class="production-slot"><span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Generating video script...</div>`}
-        </div>
+        ${isConfirmed ? renderProductionKit(post, i) : ''}
       </div>
     `;
     }).join('');
+}
+
+// ─── Production Kit (FB + IG + Email + Video) ─────────────────
+function renderProductionKit(post, index) {
+    return `
+    <div class="production-kit" id="production-kit-${index}">
+      ${post.facebook ? renderInlinePlatforms(post, index) : `<div id="platforms-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating Facebook + Instagram versions...</div>`}
+      ${post.emailHTML ? renderInlineEmail(post, index) : `<div id="email-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating email HTML...</div>`}
+      ${post.videoNarration ? renderInlineVideo(post, index) : `<div id="video-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating video script...</div>`}
+    </div>`;
+}
+
+// ─── Facebook + Instagram Inline ──────────────────────────────
+function renderInlinePlatforms(post, index) {
+    return `
+    <div class="production-slot" id="platforms-slot-${index}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+            <span style="font-weight:700;font-size:0.78rem;color:#1877F2;">📘 Facebook</span>
+            <button class="post-action-btn" onclick="window.appActions.copyFacebook(${index})" style="color:#1877F2;font-size:0.7rem;">📋 Copy</button>
+          </div>
+          <div style="background:#0D1117;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.65rem;max-height:200px;overflow-y:auto;">
+            <pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.5;color:var(--text-secondary);font-family:var(--font);margin:0;">${escapeHtml(post.facebook || '')}</pre>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+            <span style="font-weight:700;font-size:0.78rem;color:#E1306C;">📸 Instagram</span>
+            <button class="post-action-btn" onclick="window.appActions.copyInstagram(${index})" style="color:#E1306C;font-size:0.7rem;">📋 Copy</button>
+          </div>
+          <div style="background:#0D1117;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.65rem;max-height:200px;overflow-y:auto;">
+            <pre style="white-space:pre-wrap;font-size:0.75rem;line-height:1.5;color:var(--text-secondary);font-family:var(--font);margin:0;">${escapeHtml(post.instagram || '')}</pre>
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ─── Inline Email Render ──────────────────────────────────────
@@ -643,39 +697,88 @@ window.appActions = {
         } finally { setStatus('Ready'); }
     },
 
-    // ─── Mark Written: triggers inline email + video generation ──
-    async markWritten(index, checked) {
+    // ─── Edit / Confirm workflow ──────────────────────────────────
+    editPost(index) {
         const post = state.posts[index];
         if (!post) return;
-        post.written = checked;
-        saveSession();
+        post.editing = true;
+        renderPosts();
+        // Focus the textarea
+        setTimeout(() => {
+            const textarea = document.getElementById(`post-edit-${index}`);
+            if (textarea) { textarea.focus(); textarea.selectionStart = textarea.value.length; }
+        }, 50);
+    },
 
-        if (!checked) {
-            // Unticked — hide the production kit
-            const kit = document.getElementById(`production-kit-${index}`);
-            if (kit) kit.style.display = 'none';
-            renderPosts();
-            return;
+    saveEdit(index) {
+        const post = state.posts[index];
+        if (!post) return;
+        const textarea = document.getElementById(`post-edit-${index}`);
+        if (textarea) {
+            post.content = textarea.value;
+        }
+        post.editing = false;
+        saveSession();
+        renderPosts();
+        showToast(`Post ${index + 1} updated!`, 'success');
+    },
+
+    cancelEdit(index) {
+        const post = state.posts[index];
+        if (!post) return;
+        post.editing = false;
+        renderPosts();
+    },
+
+    async confirmPost(index) {
+        const post = state.posts[index];
+        if (!post) return;
+
+        // If still editing, save first
+        if (post.editing) {
+            const textarea = document.getElementById(`post-edit-${index}`);
+            if (textarea) post.content = textarea.value;
+            post.editing = false;
         }
 
-        // Show the production kit with spinners
+        post.confirmed = true;
+        saveSession();
         renderPosts();
 
         const settings = loadSettings();
         if (!settings.claudeApiKey) {
-            showToast('Claude API key needed for email + video generation.', 'error');
+            showToast('Claude API key needed.', 'error');
             return;
         }
 
-        // Generate email and video in parallel
         const chemData = CHEM_DATA[post.pillar?.id] || { id: 'dopamine' };
         const fullTopic = state.topics[index] || post.topic || {};
 
-        setStatus('📧🎬 Generating email + video script...', true);
+        setStatus(`📧🎬 Post ${index + 1}: Generating FB, IG, email, video...`, true);
 
         const promises = [];
 
-        // Email generation
+        // 1. Facebook + Instagram versions
+        if (!post.facebook) {
+            promises.push(
+                adaptPostForPlatforms({
+                    postContent: post.content,
+                    pillar: post.pillar,
+                    cta: post.cta,
+                    apiKey: settings.claudeApiKey
+                }).then(platforms => {
+                    post.facebook = platforms.facebook;
+                    post.instagram = platforms.instagram;
+                    const slot = document.getElementById(`platforms-slot-${index}`);
+                    if (slot) slot.outerHTML = renderInlinePlatforms(post, index);
+                }).catch(err => {
+                    const slot = document.getElementById(`platforms-slot-${index}`);
+                    if (slot) slot.innerHTML = `<span style="color:#e84444;font-size:0.75rem;">❌ Platform error: ${err.message}</span>`;
+                })
+            );
+        }
+
+        // 2. Email HTML
         if (!post.emailHTML) {
             promises.push(
                 generateEmail({
@@ -688,17 +791,16 @@ window.appActions = {
                     post.emailSubject = emailData.subject || '';
                     post.emailHTML = renderEmailHTML(emailData, post.pillar);
                     post.emailData = emailData;
-                    // Update the email slot inline
                     const slot = document.getElementById(`email-slot-${index}`);
                     if (slot) slot.outerHTML = renderInlineEmail(post, index);
                 }).catch(err => {
                     const slot = document.getElementById(`email-slot-${index}`);
-                    if (slot) slot.innerHTML = `<span style="color:var(--red,#e84444);font-size:0.75rem;">❌ Email error: ${err.message}</span>`;
+                    if (slot) slot.innerHTML = `<span style="color:#e84444;font-size:0.75rem;">❌ Email error: ${err.message}</span>`;
                 })
             );
         }
 
-        // Video narration generation
+        // 3. Video narration
         if (!post.videoNarration) {
             promises.push(
                 generateVideoScript({
@@ -712,7 +814,6 @@ window.appActions = {
                     apiKey: settings.claudeApiKey
                 }).then(script => {
                     post.videoScriptRaw = script;
-                    // Extract pure narration — strip headers, timings, section markers
                     const videoScriptMatch = script.match(/=== VIDEO SCRIPT ===\s*([\s\S]*?)(?:=== SLIDE DECK BRIEF|$)/i);
                     let narration = '';
                     if (videoScriptMatch) {
@@ -728,17 +829,13 @@ window.appActions = {
                             .trim();
                     }
                     post.videoNarration = narration;
-
-                    // Extract Manus slide deck brief
                     const slideMatch = script.match(/=== SLIDE DECK BRIEF[\s\S]*?(?====|$)/i);
                     post.manusSlidesBrief = slideMatch ? slideMatch[0].trim() : '';
-
-                    // Update the video slot inline
                     const slot = document.getElementById(`video-slot-${index}`);
                     if (slot) slot.outerHTML = renderInlineVideo(post, index);
                 }).catch(err => {
                     const slot = document.getElementById(`video-slot-${index}`);
-                    if (slot) slot.innerHTML = `<span style="color:var(--red,#e84444);font-size:0.75rem;">❌ Video error: ${err.message}</span>`;
+                    if (slot) slot.innerHTML = `<span style="color:#e84444;font-size:0.75rem;">❌ Video error: ${err.message}</span>`;
                 })
             );
         }
@@ -746,32 +843,41 @@ window.appActions = {
         await Promise.all(promises);
         saveSession();
         setStatus('Ready');
-        showToast(`Post ${index + 1}: email + video script ready!`, 'success');
+        showToast(`Post ${index + 1}: all outputs ready! LinkedIn, Facebook, Instagram, Email, Video.`, 'success');
     },
 
-    // ─── Copy helpers for inline email + video ──────────────────
+    unconfirmPost(index) {
+        const post = state.posts[index];
+        if (!post) return;
+        post.confirmed = false;
+        renderPosts();
+        saveSession();
+    },
+
+    // ─── Copy helpers ───────────────────────────────────────────
     copyEmailHTML(index) {
         const post = state.posts[index];
-        if (post?.emailHTML) {
-            copyToClipboard(post.emailHTML);
-            showToast('Email HTML copied!', 'success');
-        }
+        if (post?.emailHTML) { copyToClipboard(post.emailHTML); showToast('Email HTML copied!', 'success'); }
     },
 
     copyEmailSubject(index) {
         const post = state.posts[index];
-        if (post?.emailSubject) {
-            copyToClipboard(post.emailSubject);
-            showToast('Email subject copied!', 'success');
-        }
+        if (post?.emailSubject) { copyToClipboard(post.emailSubject); showToast('Email subject copied!', 'success'); }
     },
 
     copyVideoNarration(index) {
         const post = state.posts[index];
-        if (post?.videoNarration) {
-            copyToClipboard(post.videoNarration);
-            showToast('Video narration copied! (pure text, no headers)', 'success');
-        }
+        if (post?.videoNarration) { copyToClipboard(post.videoNarration); showToast('Video narration copied!', 'success'); }
+    },
+
+    copyFacebook(index) {
+        const post = state.posts[index];
+        if (post?.facebook) { copyToClipboard(post.facebook); showToast('Facebook post copied!', 'success'); }
+    },
+
+    copyInstagram(index) {
+        const post = state.posts[index];
+        if (post?.instagram) { copyToClipboard(post.instagram); showToast('Instagram caption copied!', 'success'); }
     },
 
     copyManusPrompt(index) {
@@ -794,7 +900,6 @@ DESIGN SPECS:
 - Font: Inter or similar clean sans-serif
 - Style: Premium, data-driven, dark executive aesthetic
 - Each slide should have minimal text (max 15 words) — the avatar narrates over it
-- Include subtle geometric/neuroscience-themed background elements
 
 ${brief}
 

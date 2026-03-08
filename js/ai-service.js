@@ -709,6 +709,53 @@ export async function checkHeyGenVideoStatus(videoId, apiKey) {
     };
 }
 
+// ─── Adapt Confirmed Post for Facebook + Instagram ────────────
+export async function adaptPostForPlatforms({ postContent, pillar, cta, apiKey }) {
+    const prompt = `You are Craig Muirhead's content strategist. Take this confirmed LinkedIn post and adapt it for Facebook and Instagram.
+
+CONFIRMED LINKEDIN POST:
+${postContent}
+
+CONTENT PILLAR: ${pillar?.name || 'Leadership'}
+CTA: ${cta?.shortName || 'Winning Formula Assessment'} — ${cta?.url || 'caminocoaching.co.uk/leader-assessment'}
+
+Create TWO adapted versions:
+
+=== FACEBOOK POST ===
+Rules:
+- Shorter than LinkedIn (150-250 words max)
+- More conversational, warmer tone
+- Remove the LinkedIn-specific formatting (short line breaks for feed)
+- Keep the source article reference and neurochemistry angle
+- Add 1-2 relevant emoji in the hook line
+- End with the same CTA but phrase it casually
+- No hashtags on Facebook
+- Make it feel like Craig sharing an insight with friends, not a professional post
+
+=== INSTAGRAM POST ===
+Rules:
+- Caption for a Reel or carousel (100-180 words max)
+- Punchy, scroll-stopping first line
+- Use line breaks between short paragraphs
+- 3-5 targeted hashtags at the end (e.g., #LeadershipNeuroscience #CEOMindset #BrainChemistry #ExecutivePerformance #CaminoCoaching)
+- Include 2-3 emoji naturally in the text
+- CTA: "Link in bio" or "Comment [keyword] for the free assessment"
+- Same source article hook but compressed for mobile attention spans
+
+Return ONLY these two sections, clearly separated with the === headers.`;
+
+    const response = await callClaude(prompt, apiKey, false);
+
+    // Parse the two versions
+    const fbMatch = response.match(/=== FACEBOOK POST ===\s*([\s\S]*?)(?:=== INSTAGRAM|$)/i);
+    const igMatch = response.match(/=== INSTAGRAM POST ===\s*([\s\S]*?)$/i);
+
+    return {
+        facebook: fbMatch ? fbMatch[1].trim() : response,
+        instagram: igMatch ? igMatch[1].trim() : ''
+    };
+}
+
 // ─── Generate Email Copy (Claude) ─────────────────────────────
 export async function generateEmail({ topic, pillar, cta, postContent, apiKey }) {
     const prompt = `You are Craig Muirhead, writing a short nurture email to your list of business leaders and CEOs.
