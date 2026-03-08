@@ -885,12 +885,23 @@ window.appActions = {
         if (!post) return;
         const chemData = CHEM_DATA[post.pillar?.id] || { id: 'dopamine', name: 'Dopamine', icon: '🟡' };
         const brief = post.manusSlidesBrief || '';
+        const topic = state.topics[index] || post.topic || {};
+        const sourceArticle = topic.sourceArticle || topic.source || '';
+        const articleUrl = topic.articleUrl || '';
+        const headline = topic.headline || '';
+        const talkingPoints = topic.talkingPoints || [];
+        const mechanism = topic.mechanism || '';
 
         const prompt = `Create a professional 9:16 slide deck for a 45-60 second LinkedIn video.
 
 BRAND: Camino Coaching — Craig Muirhead
-TOPIC: Post ${index + 1}
 CHEMICAL: ${chemData.icon} ${chemData.name}
+
+SOURCE ARTICLE (the slides must reference this story):
+- Headline: ${headline || sourceArticle}
+${articleUrl ? `- URL: ${articleUrl}` : ''}
+${talkingPoints.length > 0 ? `- Key findings: ${talkingPoints.join(' | ')}` : ''}
+${mechanism ? `- Brain mechanism: ${mechanism}` : ''}
 
 DESIGN SPECS:
 - Format: 9:16 (1080x1920px) — vertical for LinkedIn/Reels
@@ -904,14 +915,16 @@ DESIGN SPECS:
 ${brief}
 
 ADDITIONAL NOTES:
-- Slide 1 should be bold and scroll-stopping (large text, high contrast)
+- Slide 1 should reference the source article's hook (person, study, or finding)
+- Slide 2 should present the article's key data point or story
+- Slide 3 names the brain chemical in teal with one-line description
 - Data slides should feature ONE large number with a short label below
 - CTA slide needs the assessment URL clearly visible: caminocoaching.co.uk/leader-assessment
 - End card: "Camino Coaching" branding + "⭐ 4.9/5 · 85 five-star reviews"
 - Export as PowerPoint (.pptx) format for HeyGen PPT-to-Video upload`;
 
         copyToClipboard(prompt);
-        showToast('Manus slide deck prompt copied!', 'success');
+        showToast('Manus prompt copied (includes source article)!', 'success');
     },
 
     clearSession() { clearSession(); }
