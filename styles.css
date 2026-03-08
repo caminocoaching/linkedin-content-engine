@@ -2113,3 +2113,44 @@ body::before {
 .single-result-container:not(.hidden) {
   animation: slideUp 0.4s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PRODUCTION KIT — Inline Email + Video after "Written" tick
+   ═══════════════════════════════════════════════════════════════ */
+
+.post-written {
+  border-color: rgba(46, 160, 67, 0.25) !important;
+}
+
+.post-written .post-card-header {
+  border-bottom-color: rgba(46, 160, 67, 0.12);
+}
+
+.production-kit {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1rem 1.25rem;
+  animation: slideUp 0.3s ease;
+}
+
+.production-slot {
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.production-slot:last-child {
+  margin-bottom: 0;
+}
+
+.written-checkbox:hover {
+  background: rgba(46, 160, 67, 0.1) !important;
+  color: var(--green, #2EA043) !important;
+  border-color: rgba(46, 160, 67, 0.2) !important;
+}

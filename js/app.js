@@ -408,9 +408,10 @@ function renderPosts() {
         }
 
         const chem = state.stories[i]?.chemical || {};
+        const isWritten = post.written || false;
 
         return `
-      <div class="post-card" id="post-card-${i}" data-index="${i}">
+      <div class="post-card ${isWritten ? 'post-written' : ''}" id="post-card-${i}" data-index="${i}">
         <div class="post-card-header">
           <div class="post-card-header-left">
             <span class="post-number">${i + 1}</span>
@@ -437,13 +438,57 @@ function renderPosts() {
             <button class="post-action-btn" onclick="window.appActions.copyPost(${i})">📋 Copy</button>
             <button class="post-action-btn" onclick="window.appActions.downloadPost(${i})">💾 .txt</button>
             <button class="post-action-btn" onclick="window.appActions.regenPost(${i})">🔄 Regen</button>
-            <button class="post-action-btn" onclick="window.appActions.generateEmailForPost(${i})" style="color:var(--gold);">📧 Email</button>
-            <button class="post-action-btn" onclick="window.appActions.generateVideoForPost(${i})" style="color:var(--neuro-teal, #00BFA5);">🎬 Video</button>
+            <label class="written-checkbox" style="display:inline-flex;align-items:center;gap:0.35rem;cursor:pointer;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.75rem;font-weight:700;transition:all 0.2s;${isWritten ? 'background:rgba(46,160,67,0.15);color:var(--green,#2EA043);border:1px solid rgba(46,160,67,0.3);' : 'background:rgba(255,255,255,0.04);color:var(--text-muted);border:1px solid rgba(255,255,255,0.08);'}">
+              <input type="checkbox" ${isWritten ? 'checked' : ''} onchange="window.appActions.markWritten(${i}, this.checked)" style="accent-color:var(--green,#2EA043);cursor:pointer;" />
+              ${isWritten ? '✅ Written' : 'Mark Written'}
+            </label>
           </div>
+        </div>
+
+        <!-- Inline production kit (appears after Written is ticked) -->
+        <div id="production-kit-${i}" class="production-kit" style="display:${isWritten ? 'block' : 'none'};">
+          ${post.emailHTML ? renderInlineEmail(post, i) : `<div id="email-slot-${i}" class="production-slot"><span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Generating email...</div>`}
+          ${post.videoNarration ? renderInlineVideo(post, i) : `<div id="video-slot-${i}" class="production-slot"><span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Generating video script...</div>`}
         </div>
       </div>
     `;
     }).join('');
+}
+
+// ─── Inline Email Render ──────────────────────────────────────
+function renderInlineEmail(post, index) {
+    return `
+    <div class="production-slot" id="email-slot-${index}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <span style="font-weight:700;font-size:0.8rem;color:var(--gold,#DAA520);">📧 Email HTML</span>
+        <div style="display:flex;gap:0.35rem;">
+          <button class="post-action-btn" onclick="window.appActions.copyEmailHTML(${index})" style="color:var(--gold);">📋 Copy HTML</button>
+          <button class="post-action-btn" onclick="window.appActions.copyEmailSubject(${index})">📝 Subject</button>
+        </div>
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;">Subject: <strong style="color:var(--gold);">${escapeHtml(post.emailSubject || '')}</strong></div>
+      <div style="border:1px solid rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;background:#0D1117;">
+        <iframe id="email-frame-${index}" style="width:100%;height:320px;border:none;" srcdoc="${escapeHtml(post.emailHTML || '')}"></iframe>
+      </div>
+    </div>`;
+}
+
+// ─── Inline Video Narration Render ────────────────────────────
+function renderInlineVideo(post, index) {
+    return `
+    <div class="production-slot" id="video-slot-${index}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <span style="font-weight:700;font-size:0.8rem;color:var(--neuro-teal,#00BFA5);">🎬 Video Narration Script</span>
+        <div style="display:flex;gap:0.35rem;">
+          <button class="post-action-btn" onclick="window.appActions.copyVideoNarration(${index})" style="color:var(--neuro-teal);">📋 Copy Script</button>
+          <button class="post-action-btn" onclick="window.appActions.copyManusPrompt(${index})">📊 Manus Prompt</button>
+        </div>
+      </div>
+      <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.4rem;">Pure narration — no headers or timings. Paste directly into HeyGen.</div>
+      <div style="background:#0D1117;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.75rem;max-height:250px;overflow-y:auto;">
+        <pre id="narration-${index}" style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(post.videoNarration || '')}</pre>
+      </div>
+    </div>`;
 }
 
 
@@ -596,6 +641,172 @@ window.appActions = {
             showToast(`Video error: ${err.message}`, 'error');
             console.error(err);
         } finally { setStatus('Ready'); }
+    },
+
+    // ─── Mark Written: triggers inline email + video generation ──
+    async markWritten(index, checked) {
+        const post = state.posts[index];
+        if (!post) return;
+        post.written = checked;
+        saveSession();
+
+        if (!checked) {
+            // Unticked — hide the production kit
+            const kit = document.getElementById(`production-kit-${index}`);
+            if (kit) kit.style.display = 'none';
+            renderPosts();
+            return;
+        }
+
+        // Show the production kit with spinners
+        renderPosts();
+
+        const settings = loadSettings();
+        if (!settings.claudeApiKey) {
+            showToast('Claude API key needed for email + video generation.', 'error');
+            return;
+        }
+
+        // Generate email and video in parallel
+        const chemData = CHEM_DATA[post.pillar?.id] || { id: 'dopamine' };
+        const fullTopic = state.topics[index] || post.topic || {};
+
+        setStatus('📧🎬 Generating email + video script...', true);
+
+        const promises = [];
+
+        // Email generation
+        if (!post.emailHTML) {
+            promises.push(
+                generateEmail({
+                    postContent: post.content,
+                    topic: post.topic || state.topics[index],
+                    pillar: post.pillar,
+                    cta: post.cta,
+                    apiKey: settings.claudeApiKey
+                }).then(emailData => {
+                    post.emailSubject = emailData.subject || '';
+                    post.emailHTML = renderEmailHTML(emailData, post.pillar);
+                    post.emailData = emailData;
+                    // Update the email slot inline
+                    const slot = document.getElementById(`email-slot-${index}`);
+                    if (slot) slot.outerHTML = renderInlineEmail(post, index);
+                }).catch(err => {
+                    const slot = document.getElementById(`email-slot-${index}`);
+                    if (slot) slot.innerHTML = `<span style="color:var(--red,#e84444);font-size:0.75rem;">❌ Email error: ${err.message}</span>`;
+                })
+            );
+        }
+
+        // Video narration generation
+        if (!post.videoNarration) {
+            promises.push(
+                generateVideoScript({
+                    topic: fullTopic,
+                    chemicalId: chemData.id,
+                    pillar: post.pillar,
+                    postContent: post.content,
+                    videoLength: '45-60s',
+                    platform: 'LinkedIn Video',
+                    outputFormat: '9:16',
+                    apiKey: settings.claudeApiKey
+                }).then(script => {
+                    post.videoScriptRaw = script;
+                    // Extract pure narration — strip headers, timings, section markers
+                    const videoScriptMatch = script.match(/=== VIDEO SCRIPT ===\s*([\s\S]*?)(?:=== SLIDE DECK BRIEF|$)/i);
+                    let narration = '';
+                    if (videoScriptMatch) {
+                        narration = videoScriptMatch[1]
+                            .replace(/^[A-Z\s]+([\(\[][\d\w\-–\s]+[\)\]])?:\s*/gm, '')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
+                    } else {
+                        narration = script
+                            .replace(/=== [A-Z\s]+ ===/g, '')
+                            .replace(/^(HOOK|SCENARIO|THE SCIENCE|THE COST|THE BRIDGE|CTA|Slide \d+)[^:]*:\s*/gm, '')
+                            .replace(/\n{3,}/g, '\n\n')
+                            .trim();
+                    }
+                    post.videoNarration = narration;
+
+                    // Extract Manus slide deck brief
+                    const slideMatch = script.match(/=== SLIDE DECK BRIEF[\s\S]*?(?====|$)/i);
+                    post.manusSlidesBrief = slideMatch ? slideMatch[0].trim() : '';
+
+                    // Update the video slot inline
+                    const slot = document.getElementById(`video-slot-${index}`);
+                    if (slot) slot.outerHTML = renderInlineVideo(post, index);
+                }).catch(err => {
+                    const slot = document.getElementById(`video-slot-${index}`);
+                    if (slot) slot.innerHTML = `<span style="color:var(--red,#e84444);font-size:0.75rem;">❌ Video error: ${err.message}</span>`;
+                })
+            );
+        }
+
+        await Promise.all(promises);
+        saveSession();
+        setStatus('Ready');
+        showToast(`Post ${index + 1}: email + video script ready!`, 'success');
+    },
+
+    // ─── Copy helpers for inline email + video ──────────────────
+    copyEmailHTML(index) {
+        const post = state.posts[index];
+        if (post?.emailHTML) {
+            copyToClipboard(post.emailHTML);
+            showToast('Email HTML copied!', 'success');
+        }
+    },
+
+    copyEmailSubject(index) {
+        const post = state.posts[index];
+        if (post?.emailSubject) {
+            copyToClipboard(post.emailSubject);
+            showToast('Email subject copied!', 'success');
+        }
+    },
+
+    copyVideoNarration(index) {
+        const post = state.posts[index];
+        if (post?.videoNarration) {
+            copyToClipboard(post.videoNarration);
+            showToast('Video narration copied! (pure text, no headers)', 'success');
+        }
+    },
+
+    copyManusPrompt(index) {
+        const post = state.posts[index];
+        if (!post) return;
+        const chemData = CHEM_DATA[post.pillar?.id] || { id: 'dopamine', name: 'Dopamine', icon: '🟡' };
+        const brief = post.manusSlidesBrief || '';
+
+        const prompt = `Create a professional 9:16 slide deck for a 45-60 second LinkedIn video.
+
+BRAND: Camino Coaching — Craig Muirhead
+TOPIC: Post ${index + 1}
+CHEMICAL: ${chemData.icon} ${chemData.name}
+
+DESIGN SPECS:
+- Format: 9:16 (1080x1920px) — vertical for LinkedIn/Reels
+- Background: Deep navy (#0A1628) with subtle gradient
+- Primary accent: Teal (#00BFA5) for chemical names and key data
+- Secondary accent: Gold (#DAA520) for CTA elements
+- Font: Inter or similar clean sans-serif
+- Style: Premium, data-driven, dark executive aesthetic
+- Each slide should have minimal text (max 15 words) — the avatar narrates over it
+- Include subtle geometric/neuroscience-themed background elements
+
+${brief}
+
+ADDITIONAL NOTES:
+- Slide 1 should be bold and scroll-stopping (large text, high contrast)
+- Data slides should feature ONE large number with a short label below
+- CTA slide needs the assessment URL clearly visible: caminocoaching.co.uk/leader-assessment
+- End card: "Camino Coaching" branding + "⭐ 4.9/5 · 85 five-star reviews"
+- Export as PowerPoint (.pptx) format for HeyGen PPT-to-Video upload`;
+
+        copyToClipboard(prompt);
+        showToast('Manus slide deck prompt copied!', 'success');
     },
 
     clearSession() { clearSession(); }
