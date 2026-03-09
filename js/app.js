@@ -645,40 +645,167 @@ function renderInlineEmail(post, index) {
     </div>`;
 }
 
-// ─── Inline Video Narration Render ────────────────────────────
+// ─── Parse video script into slide sections ──────────────────
+function parseVideoSections(post) {
+    const raw = post.videoScriptRaw || post.videoNarration || '';
+    // Extract the VIDEO SCRIPT block
+    const scriptMatch = raw.match(/=== VIDEO SCRIPT ===\s*([\s\S]*?)(?:=== SLIDE DECK BRIEF|=== HEYGEN|=== SOCIAL|$)/i);
+    const scriptBlock = scriptMatch ? scriptMatch[1] : raw;
+
+    const sectionDefs = [
+        { key: 'hook', label: 'Slide 1 — Hook', timing: '0-5s', color: '#FF6B6B', icon: '🎯' },
+        { key: 'scenario', label: 'Slide 2 — Scenario', timing: '5-15s', color: '#DAA520', icon: '🎬' },
+        { key: 'science', label: 'Slide 3 — The Science', timing: '15-35s', color: '#00BFA5', icon: '🧠' },
+        { key: 'cost', label: 'Slide 4 — The Cost', timing: '35-45s', color: '#E8912A', icon: '📊' },
+        { key: 'bridge', label: 'Slide 5 — The Bridge', timing: '45-55s', color: '#8B5CF6', icon: '🌉' },
+        { key: 'cta', label: 'Slide 6 — CTA', timing: '55-60s', color: '#2EA043', icon: '📣' }
+    ];
+
+    // Match patterns like "HOOK (0-5s):", "THE SCIENCE (15-35s):", "SCENARIO:"
+    const sectionPatterns = [
+        /HOOK\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /SCENARIO\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /THE SCIENCE\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /THE COST\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /THE BRIDGE\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /CTA\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i
+    ];
+
+    const sections = [];
+    for (let i = 0; i < sectionPatterns.length; i++) {
+        const startMatch = scriptBlock.match(sectionPatterns[i]);
+        if (!startMatch) continue;
+
+        const startIdx = scriptBlock.indexOf(startMatch[0]) + startMatch[0].length;
+        // Find the next section start
+        let endIdx = scriptBlock.length;
+        for (let j = i + 1; j < sectionPatterns.length; j++) {
+            const nextMatch = scriptBlock.match(sectionPatterns[j]);
+            if (nextMatch) {
+                const nextIdx = scriptBlock.indexOf(nextMatch[0]);
+                if (nextIdx > startIdx) { endIdx = nextIdx; break; }
+            }
+        }
+
+        const text = scriptBlock.substring(startIdx, endIdx)
+            .replace(/^\[|\]$/g, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+
+        if (text) {
+            sections.push({ ...sectionDefs[i], text });
+        }
+    }
+
+    // Fallback: if nothing parsed, return the whole narration as one section
+    if (sections.length === 0 && post.videoNarration) {
+        sections.push({ key: 'full', label: 'Full Script', timing: '0-60s', color: '#00BFA5', icon: '🎬', text: post.videoNarration });
+    }
+
+    return sections;
+}
+
+// ─── Inline Video Render (slide-by-slide) ─────────────────────
 function renderInlineVideo(post, index) {
+    const sections = parseVideoSections(post);
+
+    const slideBoxes = sections.map((s, si) => `
+        <div style="margin-bottom:0.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem;">
+            <span style="font-size:0.72rem;font-weight:700;color:${s.color};">${s.icon} ${s.label} <span style="opacity:0.5;font-weight:400;">(${s.timing})</span></span>
+            <button class="post-action-btn" onclick="navigator.clipboard.writeText(document.getElementById('video-slide-${index}-${si}').textContent);window.showToast('${s.label} copied!','success')" style="font-size:0.65rem;color:${s.color};">📋 Copy</button>
+          </div>
+          <div style="background:#0D1117;border:1px solid ${s.color}20;border-left:3px solid ${s.color};border-radius:6px;padding:0.5rem 0.65rem;">
+            <pre id="video-slide-${index}-${si}" style="white-space:pre-wrap;font-size:0.78rem;line-height:1.55;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(s.text)}</pre>
+          </div>
+        </div>
+    `).join('');
+
     return `
     <div class="production-slot" id="video-slot-${index}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-        <span style="font-weight:700;font-size:0.8rem;color:var(--neuro-teal,#00BFA5);">🎬 Video Narration Script</span>
+        <span style="font-weight:700;font-size:0.8rem;color:var(--neuro-teal,#00BFA5);">🎬 Video Script — Slide by Slide</span>
         <div style="display:flex;gap:0.35rem;">
-          <button class="post-action-btn" onclick="window.appActions.copyVideoNarration(${index})" style="color:var(--neuro-teal);">📋 Copy Script</button>
+          <button class="post-action-btn" onclick="window.appActions.copyVideoNarration(${index})" style="color:var(--neuro-teal);">📋 Copy Full Script</button>
           <button class="post-action-btn" onclick="window.appActions.copyManusPrompt(${index})">📊 Manus Prompt</button>
         </div>
       </div>
-      <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.4rem;">Pure narration — no headers or timings. Paste directly into HeyGen.</div>
-      <div style="background:#0D1117;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.75rem;max-height:250px;overflow-y:auto;">
-        <pre id="narration-${index}" style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(post.videoNarration || '')}</pre>
-      </div>
+      <div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:0.5rem;">Each box = one HeyGen slide. Copy each narration section individually, or use "Copy Full Script" for the complete narration.</div>
+      ${slideBoxes}
     </div>`;
 }
 
-// ─── Inline Shorts Render (30s Playbook) ──────────────────────
+// ─── Parse shorts script into 4 slide sections ───────────────
+function parseShortsSections(post) {
+    const raw = post.shortsScriptRaw || post.shortsNarration || '';
+    const scriptMatch = raw.match(/=== SHORTS SCRIPT[^=]*===\s*([\s\S]*?)(?:=== SHORTS SLIDE|=== LOOP|$)/i);
+    const scriptBlock = scriptMatch ? scriptMatch[1] : raw;
+
+    const sectionDefs = [
+        { key: 'hook', label: 'Slide 1 — Hook', timing: '0-5s', color: '#FF6B6B', icon: '🎯' },
+        { key: 'insight', label: 'Slide 2 — The Insight', timing: '5-18s', color: '#00BFA5', icon: '🧠' },
+        { key: 'proof', label: 'Slide 3 — The Proof', timing: '18-25s', color: '#DAA520', icon: '📊' },
+        { key: 'cta', label: 'Slide 4 — CTA', timing: '25-30s', color: '#2EA043', icon: '📣' }
+    ];
+
+    const sectionPatterns = [
+        /HOOK\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /THE INSIGHT\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /THE PROOF\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i,
+        /CTA\s*(?:\([^)]*\))?\s*(?:\|[^:]*)?:\s*/i
+    ];
+
+    const sections = [];
+    for (let i = 0; i < sectionPatterns.length; i++) {
+        const startMatch = scriptBlock.match(sectionPatterns[i]);
+        if (!startMatch) continue;
+        const startIdx = scriptBlock.indexOf(startMatch[0]) + startMatch[0].length;
+        let endIdx = scriptBlock.length;
+        for (let j = i + 1; j < sectionPatterns.length; j++) {
+            const nextMatch = scriptBlock.match(sectionPatterns[j]);
+            if (nextMatch) {
+                const nextIdx = scriptBlock.indexOf(nextMatch[0]);
+                if (nextIdx > startIdx) { endIdx = nextIdx; break; }
+            }
+        }
+        const text = scriptBlock.substring(startIdx, endIdx).replace(/^\[|\]$/g, '').replace(/\n{3,}/g, '\n\n').trim();
+        if (text) sections.push({ ...sectionDefs[i], text });
+    }
+
+    if (sections.length === 0 && post.shortsNarration) {
+        sections.push({ key: 'full', label: 'Full Shorts Script', timing: '0-30s', color: '#FF6B6B', icon: '⚡', text: post.shortsNarration });
+    }
+    return sections;
+}
+
+// ─── Inline Shorts Render (slide-by-slide) ────────────────────
 function renderInlineShorts(post, index) {
+    const sections = parseShortsSections(post);
+
+    const slideBoxes = sections.map((s, si) => `
+        <div style="margin-bottom:0.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.25rem;">
+            <span style="font-size:0.72rem;font-weight:700;color:${s.color};">${s.icon} ${s.label} <span style="opacity:0.5;font-weight:400;">(${s.timing})</span></span>
+            <button class="post-action-btn" onclick="navigator.clipboard.writeText(document.getElementById('shorts-slide-${index}-${si}').textContent);window.showToast('${s.label} copied!','success')" style="font-size:0.65rem;color:${s.color};">📋 Copy</button>
+          </div>
+          <div style="background:#0D1117;border:1px solid ${s.color}20;border-left:3px solid ${s.color};border-radius:6px;padding:0.5rem 0.65rem;">
+            <pre id="shorts-slide-${index}-${si}" style="white-space:pre-wrap;font-size:0.78rem;line-height:1.55;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(s.text)}</pre>
+          </div>
+        </div>
+    `).join('');
+
     return `
     <div class="production-slot" id="shorts-slot-${index}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-        <span style="font-weight:700;font-size:0.8rem;color:#FF6B6B;">⚡ Shorts Script (30s Playbook)</span>
+        <span style="font-weight:700;font-size:0.8rem;color:#FF6B6B;">⚡ Shorts Script — Slide by Slide</span>
         <div style="display:flex;gap:0.35rem;">
-          <button class="post-action-btn" onclick="window.appActions.copyShortsScript(${index})" style="color:#FF6B6B;">📋 Copy Script</button>
+          <button class="post-action-btn" onclick="window.appActions.copyShortsScript(${index})" style="color:#FF6B6B;">📋 Copy Full</button>
           <button class="post-action-btn" onclick="window.appActions.copyShortsBrief(${index})">📊 Full Brief</button>
         </div>
       </div>
       <div style="font-size:0.6rem;color:var(--text-muted);margin-bottom:0.35rem;">4 slides · 75-85 words · Loop-engineered · 1.5s hook window</div>
       ${post.shortsLoopNote ? `<div style="margin-bottom:0.5rem;padding:0.35rem 0.6rem;background:rgba(255,107,107,0.06);border-radius:5px;border-left:2px solid #FF6B6B;font-size:0.68rem;color:var(--text-muted);">🔄 <strong>Loop:</strong> ${escapeHtml(post.shortsLoopNote)}</div>` : ''}
-      <div style="background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.15);border-radius:8px;padding:0.75rem;max-height:200px;overflow-y:auto;">
-        <pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(post.shortsNarration || '')}</pre>
-      </div>
+      ${slideBoxes}
     </div>`;
 }
 
