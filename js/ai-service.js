@@ -753,6 +753,11 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
                 }
             }
         }
+        // Log redirect vs real URL counts
+        const redirectCount = groundingChunks.filter(gc => gc.uri.includes('grounding-api-redirect') || gc.uri.includes('vertexaisearch')).length;
+        if (redirectCount > 0) {
+            console.warn(`[Gemini] ⚠️ ${redirectCount}/${groundingChunks.length} grounding chunks are redirect URLs (will be filtered)`);
+        }
     } catch (e) {
         console.warn('[Gemini] Error extracting grounding metadata:', e);
     }
@@ -785,12 +790,16 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
             let parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
 
             if (Array.isArray(parsed)) {
+                // Helper: check if a URL is a Gemini redirect (not a real article URL)
+                const isRedirectUrl = (u) => u.includes('grounding-api-redirect') || u.includes('googleapis.com') || u.includes('vertexaisearch');
+
+                // Filter out YouTube AND grounding redirect URLs from chunks
                 const cleanChunks = groundingChunks.filter(gc =>
-                    !gc.uri.includes('youtube.com') && !gc.uri.includes('youtu.be')
+                    !gc.uri.includes('youtube.com') && !gc.uri.includes('youtu.be') && !isRedirectUrl(gc.uri)
                 );
                 const usedChunkIdxs = new Set();
 
-                console.log(`[URL] ${cleanChunks.length} grounding chunks available (YouTube filtered):`);
+                console.log(`[URL] ${cleanChunks.length} real grounding chunks (filtered redirects + YouTube):`);
                 cleanChunks.forEach((c, i) => console.log(`  [${i}] ${c.uri} — "${c.title}"`));
 
                 const wordSimilarity = (textA, textB) => {
@@ -804,10 +813,13 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
 
                 const storyScores = parsed.map((item, idx) => {
                     const url = item.articleUrl || '';
-                    if (url.includes('youtube.com') || url.includes('youtu.be')) { item.articleUrl = ''; }
+                    // Strip bad URLs (YouTube, Gemini redirects)
+                    if (url.includes('youtube.com') || url.includes('youtu.be') || isRedirectUrl(url)) {
+                        if (isRedirectUrl(url)) console.warn(`[URL] Story ${idx + 1}: 🚫 Stripped Gemini redirect URL`);
+                        item.articleUrl = '';
+                    }
 
-                    if (item.articleUrl && !item.articleUrl.includes('grounding-api-redirect') &&
-                        !item.articleUrl.includes('googleapis.com') &&
+                    if (item.articleUrl &&
                         (item.articleUrl.startsWith('http://') || item.articleUrl.startsWith('https://'))) {
                         item.urlMatchMethod = 'gemini-direct';
                         console.log(`[URL] Story ${idx + 1}: ✅ Gemini-provided URL → ${item.articleUrl}`);
