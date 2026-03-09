@@ -490,6 +490,104 @@ Slide 8 — End Card: [Camino Coaching branding. 4.9 Trustpilot · 120 five-star
     return await callClaude(prompt, apiKey, false);
 }
 
+
+// ─── Generate 30-Second Shorts Script (Business Playbook) ────────
+// 4 slides, 75-85 words, 1.5s hook window, loop-engineered, one idea only.
+// YouTube Shorts + Instagram Reels + Facebook Reels
+export async function generateShortsScript({ topic, chemicalId, sourceArticle = '', articleUrl = '', mechanism = '', businessRelevance = '', killerDataPoint = '', talkingPoints = [], postContent = '', apiKey }) {
+
+    const chemContext = buildVideoScriptContext(chemicalId, typeof topic === 'string' ? topic : topic?.headline || topic);
+
+    const headline = typeof topic === 'string' ? topic : (topic?.headline || topic);
+
+    const prompt = `You are Craig Muirhead's SHORT-FORM video strategist. Write a 30-SECOND Shorts script for YouTube Shorts + Instagram Reels + Facebook Reels.
+
+=== THE 30-SECOND SHORTS PLAYBOOK (FOLLOW EXACTLY) ===
+
+RULE 1 — YOU HAVE 1.5 SECONDS, NOT 3:
+The first frame and first spoken word must create a reason to stay before the viewer's thumb finishes its scroll motion. Voice starts at 0.0 seconds. No intro. No greeting. No "in this video." The hook text (Slide 1) must be readable in under 1 second: 5-7 words maximum.
+
+RULE 2 — TEXT ON SCREEN IS MANDATORY:
+Over 60% watch sound-off. Every word spoken must appear as burned-in captions. Two layers: the slide content (key point/data) + captions of narration.
+
+RULE 3 — ONE IDEA PER VIDEO:
+A 30-second Short holds exactly ONE idea. Not two. Not "one idea with a bonus tip." One. Compress to 4 slides and 3 sections.
+
+RULE 4 — SLIDE CHANGES EVERY 3-5 SECONDS:
+4 slides in 30 seconds. Each on screen 5-8 seconds. Add visual micro-changes within slides where possible.
+
+RULE 5 — DESIGN FOR THE LOOP:
+End with a statement that connects back to the opening. The viewer's brain loops back. This is the most powerful algorithm signal.
+
+RULE 6 — CTA MUST BE EFFORTLESS:
+"Comment FORMULA for the free assessment." Six words. That is the entire CTA. No explaining the assessment. No sales pitch.
+
+=== SOURCE MATERIAL ===
+TOPIC: ${headline}
+${sourceArticle ? `ARTICLE: ${sourceArticle}` : ''}
+${articleUrl ? `URL: ${articleUrl}` : ''}
+${mechanism ? `BRAIN CHEMICAL: ${mechanism}` : ''}
+${killerDataPoint ? `KILLER DATA POINT: "${killerDataPoint}"` : ''}
+${businessRelevance ? `BUSINESS RELEVANCE: ${businessRelevance}` : ''}
+${talkingPoints.length > 0 ? `KEY POINTS: ${talkingPoints.join(' | ')}` : ''}
+${postContent ? `RELATED POST (for angle — do NOT copy):\n${postContent.substring(0, 400)}` : ''}
+
+${chemContext}
+
+=== HOOK FORMULAS (pick ONE) ===
+- The Shock Stat: "73% of CEOs make their worst decisions after back-to-back meetings."
+- The Impossible Claim: "Your brain shuts down strategic thinking after 90 minutes and you don't even notice."
+- The Named Authority: "Satya Nadella said his coach changed Microsoft's culture from the inside out."
+- The Direct Challenge: "You've never trained the 75% of leadership that happens in your head."
+- The Specific Question: "What's happening in your brain 30 seconds before your biggest board presentation?"
+
+=== WHAT KILLS THE HOOK (NEVER DO THESE) ===
+- Any introduction or greeting
+- "In this video I'm going to talk about..."
+- Logo animations or brand intros
+- Starting with context instead of the payoff
+- Generic statements like "Leadership matters"
+
+=== OUTPUT FORMAT ===
+Generate TWO things: the clean narration script AND the 4-slide Manus brief.
+
+=== SHORTS SCRIPT (30 SECONDS) ===
+HOOK (0-5s) | Slide 1:
+[One sentence. Maximum 12 words spoken. 5-7 words on screen. Voice starts at 0.0 seconds. No pause. No intro.]
+
+THE INSIGHT (5-18s) | Slide 2:
+[The article reference + the chemical explanation. 3-4 sentences maximum. Approximately 35-40 words. Name the source. Name the chemical. One sentence explaining why it matters to the leader.]
+
+THE PROOF (18-25s) | Slide 3:
+[One data point from Craig's debrief data OR from the article. 1-2 sentences. Approximately 15-20 words. Big number on screen.]
+
+CTA (25-30s) | Slide 4:
+[One sentence. 6-8 words maximum. "Comment FORMULA for the free assessment."]
+
+=== SHORTS SLIDE BRIEF (FOR MANUS — 4 SLIDES ONLY) ===
+Slide 1 — Hook: [5-7 words. Bold. Text already visible on first frame. No fade-in.]
+Slide 2 — The Insight: [Chemical name in teal/amber. One line describing the finding. Background: dark with professional imagery.]
+Slide 3 — The Proof: [One big number or stat. Large text. Teal accent.]
+Slide 4 — CTA: ["Comment FORMULA" in teal. Small: "Free Winning Formula Assessment." Dark background for smooth loop.]
+
+=== LOOP ENGINEERING ===
+[One sentence explaining how the ending connects back to the opening to trigger replay.]
+
+RULES:
+- TOTAL WORD COUNT: 75-85 words for the narration. No more. Read it aloud and time it.
+- UK English spelling (colour, analyse, programme, favourite)
+- BUSINESS language: CEO, boardroom, strategic decision, quarterly review, executive team, founder, board meeting, scaling
+- MOTORSPORT BRIDGES welcome: connect business findings to racing where natural
+- Numbers written in full text for voice (e.g., "two thousand three hundred" not "2,300")
+- WOW not HOW: reveal the chemical and what it does, NEVER the fix
+- Warm, direct, confident tone — trusted advisor at a peer level
+- Audio pacing: FAST for hook (0-5s), SLOWER for insight (5-18s), DIRECT for CTA (25-30s)
+
+Return the full formatted output with both sections.`;
+
+    return await callClaude(prompt, apiKey, false);
+}
+
 // ─── Content Deduplication Storage ────────────────────────────────────────
 const DEDUP_ARTICLES_KEY = 'business-linkedin-used-articles';
 const DEDUP_HOOKS_KEY = 'business-linkedin-used-hooks';
@@ -538,7 +636,7 @@ function buildDeduplicationContext() {
 }
 
 // ─── Claude API Call (Anthropic) — Content Writing ──────────────────
-async function callClaude(prompt, apiKey, parseJson = true) {
+export async function callClaude(prompt, apiKey, parseJson = true) {
     if (!apiKey) {
         throw new Error('Claude API key not configured. Go to Settings to add your key.');
     }
@@ -593,7 +691,7 @@ async function callClaude(prompt, apiKey, parseJson = true) {
 }
 
 // ─── Gemini API Call with Google Search Grounding — Research ────
-async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
+export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
     if (!apiKey) {
         throw new Error('Gemini API key not configured. Go to Settings to add your key.');
     }

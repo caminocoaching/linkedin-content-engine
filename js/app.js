@@ -17,8 +17,8 @@ import {
 
 import {
     generateTopics, generatePost, generatePosts, regeneratePost, generateImagePrompt,
-    generateVideoScript, adaptPostForPlatforms, storeUsedArticles, storeUsedHooks,
-    generateEmail, renderEmailHTML
+    generateVideoScript, generateShortsScript, adaptPostForPlatforms, storeUsedArticles, storeUsedHooks,
+    generateEmail, renderEmailHTML, callClaude, callGeminiWithSearch
 } from './ai-service.js';
 
 import {
@@ -53,6 +53,7 @@ const state = {
     stories: [],    // Raw story cards from AI research
     topics: [],     // Structured topics with pillars/frameworks assigned
     posts: [],      // Generated posts
+    doneData: {},   // Confirmed post outputs: { [index]: { emailHTML, videoScript, cleanVideoTXT, shortsScript, shortsTXT } }
     weeklyPillars: [],
     weeklyFrameworks: [],
     weeklyCTAs: [],
@@ -70,6 +71,7 @@ function saveSession() {
             stories: state.stories,
             topics: state.topics,
             posts: state.posts,
+            doneData: state.doneData,
             weeklyPillars: state.weeklyPillars,
             weeklyFrameworks: state.weeklyFrameworks,
             weeklyCTAs: state.weeklyCTAs,
@@ -96,6 +98,7 @@ function restoreSession() {
             stories: saved.stories || [],
             topics: saved.topics || [],
             posts: saved.posts || [],
+            doneData: saved.doneData || {},
             weeklyPillars: saved.weeklyPillars || [],
             weeklyFrameworks: saved.weeklyFrameworks || [],
             weeklyCTAs: saved.weeklyCTAs || [],
@@ -211,6 +214,15 @@ function checkSeasonalContext() {
     // No championship calendar for Business app
 }
 
+// ─── Article Preview Popup ───────────────────────────────────────
+function openArticleModal(url, title) {
+    const decodedUrl = decodeURIComponent(url);
+    const w = 900, h = 700;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    window.open(decodedUrl, '_blank', `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`);
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 // MODE 1: THIS WEEK'S 7
@@ -223,6 +235,22 @@ function initWeeklyMode() {
     document.getElementById('copy-csv-btn')?.addEventListener('click', handleCopyCSV);
     document.getElementById('generate-emails-btn')?.addEventListener('click', handleGenerateAllEmails);
     document.getElementById('clear-session-btn')?.addEventListener('click', clearSession);
+
+    // Delegated click handler for article preview popups
+    document.body.addEventListener('click', (e) => {
+        const link = e.target.closest('.article-preview-link');
+        if (link) {
+            e.preventDefault();
+            e.stopPropagation();
+            const url = link.dataset.url || '';
+            const title = link.dataset.title || '';
+            if (url) {
+                openArticleModal(url, title);
+            } else {
+                showToast('No article URL available for this story.', 'info');
+            }
+        }
+    });
 }
 
 
@@ -522,6 +550,7 @@ function renderProductionKit(post, index) {
       ${post.facebook ? renderInlinePlatforms(post, index) : `<div id="platforms-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating Facebook + Instagram versions...</div>`}
       ${post.emailHTML ? renderInlineEmail(post, index) : `<div id="email-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating email HTML...</div>`}
       ${post.videoNarration ? renderInlineVideo(post, index) : `<div id="video-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating video script...</div>`}
+      ${post.shortsNarration ? renderInlineShorts(post, index) : `<div id="shorts-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating 30s shorts script...</div>`}
     </div>`;
 }
 
@@ -584,6 +613,25 @@ function renderInlineVideo(post, index) {
       <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.4rem;">Pure narration — no headers or timings. Paste directly into HeyGen.</div>
       <div style="background:#0D1117;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.75rem;max-height:250px;overflow-y:auto;">
         <pre id="narration-${index}" style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(post.videoNarration || '')}</pre>
+      </div>
+    </div>`;
+}
+
+// ─── Inline Shorts Render (30s Playbook) ──────────────────────
+function renderInlineShorts(post, index) {
+    return `
+    <div class="production-slot" id="shorts-slot-${index}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <span style="font-weight:700;font-size:0.8rem;color:#FF6B6B;">⚡ Shorts Script (30s Playbook)</span>
+        <div style="display:flex;gap:0.35rem;">
+          <button class="post-action-btn" onclick="window.appActions.copyShortsScript(${index})" style="color:#FF6B6B;">📋 Copy Script</button>
+          <button class="post-action-btn" onclick="window.appActions.copyShortsBrief(${index})">📊 Full Brief</button>
+        </div>
+      </div>
+      <div style="font-size:0.6rem;color:var(--text-muted);margin-bottom:0.35rem;">4 slides · 75-85 words · Loop-engineered · 1.5s hook window</div>
+      ${post.shortsLoopNote ? `<div style="margin-bottom:0.5rem;padding:0.35rem 0.6rem;background:rgba(255,107,107,0.06);border-radius:5px;border-left:2px solid #FF6B6B;font-size:0.68rem;color:var(--text-muted);">🔄 <strong>Loop:</strong> ${escapeHtml(post.shortsLoopNote)}</div>` : ''}
+      <div style="background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.15);border-radius:8px;padding:0.75rem;max-height:200px;overflow-y:auto;">
+        <pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6;color:var(--text-primary);font-family:var(--font);margin:0;">${escapeHtml(post.shortsNarration || '')}</pre>
       </div>
     </div>`;
 }
@@ -883,10 +931,48 @@ window.appActions = {
             );
         }
 
+        // 4. Shorts script (30s Playbook)
+        if (!post.shortsNarration) {
+            promises.push(
+                generateShortsScript({
+                    topic: fullTopic,
+                    chemicalId: chemData.id,
+                    sourceArticle: fullTopic.sourceArticle || '',
+                    articleUrl: fullTopic.articleUrl || '',
+                    mechanism: fullTopic.mechanism || '',
+                    businessRelevance: fullTopic.businessRelevance || '',
+                    killerDataPoint: fullTopic.killerDataPoint || '',
+                    talkingPoints: fullTopic.talkingPoints || [],
+                    postContent: post.content,
+                    apiKey: settings.claudeApiKey
+                }).then(script => {
+                    post.shortsScriptRaw = script;
+                    // Parse narration
+                    const shortsMatch = script.match(/=== SHORTS SCRIPT[^=]*===\s*([\s\S]*?)(?:=== SHORTS SLIDE|$)/i);
+                    const rawShorts = (shortsMatch?.[1] || script).trim();
+                    const cleanShorts = rawShorts
+                        .replace(/^(?:HOOK|THE INSIGHT|THE PROOF|CTA)\s*(?:\([^)]*\))?\s*(?:\|\s*Slide\s*\d+\s*)?:\s*/gim, '')
+                        .replace(/^On screen:.*$/gim, '')
+                        .replace(/^Voice:\s*/gim, '')
+                        .replace(/\n{3,}/g, '\n\n')
+                        .trim();
+                    post.shortsNarration = cleanShorts;
+                    // Parse loop note
+                    const loopMatch = script.match(/=== LOOP (?:ENGINEERING|NOTE)[^=]*===\s*([\s\S]*?)(?:===|$)/i);
+                    post.shortsLoopNote = loopMatch ? loopMatch[1].trim() : '';
+                    const slot = document.getElementById(`shorts-slot-${index}`);
+                    if (slot) slot.outerHTML = renderInlineShorts(post, index);
+                }).catch(err => {
+                    const slot = document.getElementById(`shorts-slot-${index}`);
+                    if (slot) slot.innerHTML = `<span style="color:#e84444;font-size:0.75rem;">❌ Shorts error: ${err.message}</span>`;
+                })
+            );
+        }
+
         await Promise.all(promises);
         saveSession();
         setStatus('Ready');
-        showToast(`Post ${index + 1}: all outputs ready! LinkedIn, Facebook, Instagram, Email, Video.`, 'success');
+        showToast(`Post ${index + 1}: all outputs ready! LinkedIn, Facebook, Instagram, Email, Video, Shorts.`, 'success');
     },
 
     unconfirmPost(index) {
@@ -1001,6 +1087,19 @@ ADDITIONAL NOTES:
 
         copyToClipboard(prompt);
         showToast('Manus prompt copied (includes source article)!', 'success');
+    },
+
+    // Shorts copy handlers
+    copyShortsScript(index) {
+        const post = state.posts[index];
+        if (post?.shortsNarration) { copyToClipboard(post.shortsNarration); showToast('Shorts script copied — paste into HeyGen!', 'success'); }
+        else { showToast('Confirm the post first to generate shorts.', 'info'); }
+    },
+
+    copyShortsBrief(index) {
+        const post = state.posts[index];
+        if (post?.shortsScriptRaw) { copyToClipboard(post.shortsScriptRaw); showToast('Full shorts brief copied — includes Manus slides!', 'success'); }
+        else { showToast('Confirm the post first.', 'info'); }
     },
 
     clearSession() { clearSession(); }
