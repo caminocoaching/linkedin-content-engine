@@ -166,6 +166,7 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 4000);
 }
+window.showToast = showToast;
 
 
 // ─── Navigation (2 modes + settings) ──────────────────────────
@@ -313,9 +314,19 @@ function renderStoryCards() {
 
     container.innerHTML = state.stories.map((story, i) => {
         const chem = story.chemical || {};
-        const source = story.sourceUrl
-            ? new URL(story.sourceUrl).hostname.replace('www.', '')
-            : story.source || '';
+        const source = story.source || (story.sourceUrl ? new URL(story.sourceUrl).hostname.replace('www.', '') : '');
+        const matchMethod = story.urlMatchMethod || 'unverified';
+        const badges = {
+            'gemini-direct': '🟢 Direct',
+            'domain-match': '🔵 Domain',
+            'title-match': '🟡 Title',
+            'path-match': '🟠 Keywords',
+            'best-guess': '🟠 Best Guess',
+            'unverified': '⚪ No URL'
+        };
+        const badge = badges[matchMethod] || badges['unverified'];
+        const titleMismatch = story.groundingTitle && story.sourceArticle &&
+            story.groundingTitle.toLowerCase().replace(/[^a-z0-9]/g, '') !== story.sourceArticle.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         return `
       <div class="story-card" data-index="${i}">
@@ -332,13 +343,27 @@ function renderStoryCards() {
         </div>
         <div class="story-card-body">
           <h3 class="story-headline">${escapeHtml(story.headline || story.topic || '')}</h3>
-          ${story.angle ? `<p class="story-angle">${escapeHtml(story.angle)}</p>` : ''}
-          <div class="story-source">${escapeHtml(source)}</div>
+          <div style="display:grid;gap:0.35rem;font-size:0.72rem;margin-top:0.5rem;">
+            <div><span style="color:var(--text-muted);font-weight:600;">ARTICLE:</span> <span style="color:var(--text-secondary);">${escapeHtml(story.sourceArticle || story.headline || '')}</span></div>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+              <span style="color:var(--text-muted);font-weight:600;">URL:</span>
+              ${story.articleUrl
+                ? `<a href="${escapeHtml(story.articleUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">${escapeHtml(story.articleUrl.replace(/^https?:\/\/(www\.)?/, '').substring(0, 50))}</a>`
+                : '<span style="color:var(--text-muted);">—</span>'}
+              <span style="font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:3px;background:rgba(255,255,255,0.06);color:var(--text-muted);">${badge}</span>
+            </div>
+            ${titleMismatch ? `<div style="color:#DAA520;font-size:0.65rem;">⚠️ REAL TITLE: "${escapeHtml(story.groundingTitle)}"</div>` : ''}
+            ${source ? `<div><span style="color:var(--text-muted);font-weight:600;">SOURCE:</span> <span style="color:var(--text-secondary);">${escapeHtml(source)}</span></div>` : ''}
+            ${story.summary ? `<div><span style="color:var(--text-muted);font-weight:600;">SUMMARY:</span> <span style="color:var(--text-secondary);">${escapeHtml(story.summary)}</span></div>` : ''}
+            ${story.killerDataPoint ? `<div><span style="color:#DAA520;font-weight:600;">KILLER DATA POINT:</span> <span style="color:var(--text-primary);font-weight:500;">"${escapeHtml(story.killerDataPoint)}"</span></div>` : ''}
+            ${story.businessRelevance ? `<div><span style="color:var(--neuro-teal,#00BFA5);font-weight:600;">BUSINESS RELEVANCE:</span> <span style="color:var(--text-secondary);">${escapeHtml(story.businessRelevance)}</span></div>` : ''}
+          </div>
         </div>
         <div class="story-card-actions">
           <button class="story-generate-btn" onclick="window.appActions.generateStory(${i})">
             Generate →
           </button>
+          <button class="post-action-btn" onclick="window.appActions.swapStory(${i})" style="font-size:0.65rem;color:var(--text-muted);">🔄 Swap</button>
         </div>
       </div>
     `;
@@ -465,6 +490,24 @@ function renderPosts() {
             `}
           </div>
         </div>
+
+        ${isConfirmed ? `
+          <div style="padding:0.5rem 1.25rem;background:rgba(0,191,165,0.04);border-top:1px solid rgba(0,191,165,0.1);">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+              <span style="font-size:0.68rem;color:var(--text-muted);font-weight:600;">🚀 NEXT:</span>
+              <a href="https://manus.im/app/project/9SDGQdQC5wMtzPWss5vc4K" target="_blank" rel="noopener" style="font-size:0.72rem;padding:0.25rem 0.6rem;background:rgba(0,191,165,0.12);color:var(--neuro-teal,#00BFA5);border:1px solid rgba(0,191,165,0.3);border-radius:5px;text-decoration:none;font-weight:700;">🎨 Manus Slides</a>
+              <a href="https://app.heygen.com/avatar/ppt-to-video" target="_blank" rel="noopener" style="font-size:0.72rem;padding:0.25rem 0.6rem;background:rgba(218,165,32,0.12);color:var(--gold,#DAA520);border:1px solid rgba(218,165,32,0.3);border-radius:5px;text-decoration:none;font-weight:700;">🎬 HeyGen Video</a>
+              <a href="https://app.gohighlevel.com/v2/location/vdgR8teGuIgHPMPzbQkK/marketing/social-planner" target="_blank" rel="noopener" style="font-size:0.72rem;padding:0.25rem 0.6rem;background:rgba(46,160,67,0.12);color:var(--green,#2EA043);border:1px solid rgba(46,160,67,0.3);border-radius:5px;text-decoration:none;font-weight:700;">📱 GHL Planner</a>
+              <a href="https://app.usegoplus.com/location/C03hMrgoj4FLALDMqpWr/emails/create/69ae8a72a971f31b0e6df1c3/builder" target="_blank" rel="noopener" style="font-size:0.72rem;padding:0.25rem 0.6rem;background:rgba(139,92,246,0.12);color:#8B5CF6;border:1px solid rgba(139,92,246,0.3);border-radius:5px;text-decoration:none;font-weight:700;">📧 GHL Email</a>
+            </div>
+            ${topic.articleUrl ? `
+            <div style="margin-top:0.4rem;display:flex;align-items:center;gap:0.4rem;">
+              <span style="font-size:0.65rem;color:var(--text-muted);">🔗 Source for Manus:</span>
+              <a href="${escapeHtml(topic.articleUrl)}" target="_blank" style="font-size:0.65rem;color:var(--accent);text-decoration:none;max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">${escapeHtml(topic.articleUrl)}</a>
+              <button class="post-action-btn" onclick="navigator.clipboard.writeText('${escapeHtml(topic.articleUrl)}');window.showToast && window.showToast('URL copied!','success')" style="font-size:0.62rem;">📋</button>
+            </div>` : ''}
+          </div>
+        ` : ''}
 
         ${isConfirmed ? renderProductionKit(post, i) : ''}
       </div>
@@ -852,6 +895,39 @@ window.appActions = {
         post.confirmed = false;
         renderPosts();
         saveSession();
+    },
+
+    async swapStory(index) {
+        const settings = loadSettings();
+        if (!settings.geminiApiKey) { showToast('Gemini API key needed.', 'error'); return; }
+
+        setStatus(`🔄 Swapping story ${index + 1}...`, true);
+        try {
+            const pillar = state.weeklyPillars[index];
+            const slot = WEEKLY_SCHEDULE[index];
+            const prompt = `Search the web for 1 NEW story from the last 7-30 days about ${pillar?.name || 'leadership performance'}.
+SEARCH FOCUS: ${slot?.searchFocus || 'leadership mental performance neuroscience'}
+Find a DIFFERENT story from: ${state.stories[index]?.headline || ''}
+Return a JSON array with exactly 1 object: [{"pillarId":"${pillar?.id || 'hidden-cost'}","headline":"...","sourceArticle":"...","articleUrl":"...","source":"...","summary":"...","talkingPoints":["..."],"killerDataPoint":"...","emotionalHook":"...","mechanism":"...","businessRelevance":"...","contentBrief":"..."}]
+Return ONLY the JSON array.`;
+            const results = await generateTopics([pillar], state.seasonalContext, settings.geminiApiKey);
+            if (results?.[0]) {
+                state.topics[index] = results[0];
+                state.stories[index] = {
+                    ...results[0],
+                    pillar: state.weeklyPillars[index],
+                    framework: state.weeklyFrameworks[index],
+                    cta: state.weeklyCTAs[index],
+                    chemical: assignChemical(results[0], state.weeklyPillars[index]),
+                    postType: state.weeklyFrameworks[index]?.name || 'Familiar'
+                };
+                renderStoryCards();
+                saveSession();
+                showToast(`Story ${index + 1} swapped!`, 'success');
+            }
+        } catch (err) {
+            showToast(`Swap error: ${err.message}`, 'error');
+        } finally { setStatus('Ready'); }
     },
 
     // ─── Copy helpers ───────────────────────────────────────────
