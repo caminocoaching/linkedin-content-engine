@@ -5,6 +5,67 @@
 
 const STORAGE_KEY = 'business-linkedin-engine-settings';
 
+// ─── Live Error Log (global interceptor) ─────────────────────
+const _appLog = [];
+const MAX_LOG_ENTRIES = 200;
+
+function addLogEntry(level, ...args) {
+  const msg = args.map(a => {
+    if (a instanceof Error) return `${a.message}\n${a.stack || ''}`;
+    if (typeof a === 'object') try { return JSON.stringify(a, null, 2); } catch { return String(a); }
+    return String(a);
+  }).join(' ');
+  _appLog.push({ time: new Date(), level, msg });
+  if (_appLog.length > MAX_LOG_ENTRIES) _appLog.splice(0, _appLog.length - MAX_LOG_ENTRIES);
+  // Live-update the log panel if visible
+  const logEl = document.getElementById('live-log-content');
+  const counterEl = document.getElementById('log-error-count');
+  if (logEl) {
+    const entry = formatLogEntry(_appLog[_appLog.length - 1]);
+    logEl.insertAdjacentHTML('beforeend', entry);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  if (counterEl) {
+    const errCount = _appLog.filter(e => e.level === 'error').length;
+    counterEl.textContent = errCount > 0 ? `${errCount} error${errCount > 1 ? 's' : ''}` : 'No errors';
+    counterEl.style.color = errCount > 0 ? '#e84444' : 'var(--green, #2EA043)';
+  }
+}
+
+function formatLogEntry(entry) {
+  const timeStr = entry.time.toLocaleTimeString('en-GB', { hour12: false });
+  const colors = { error: '#e84444', warn: '#DAA520', info: '#00BFA5', log: '#8B949E' };
+  const icons = { error: '❌', warn: '⚠️', info: 'ℹ️', log: '📝' };
+  const color = colors[entry.level] || colors.log;
+  const icon = icons[entry.level] || icons.log;
+  const escapedMsg = entry.msg.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<div style="padding:0.25rem 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.72rem;line-height:1.45;">
+        <span style="color:${color};font-weight:700;">${icon} ${timeStr}</span>
+        <span style="color:${color};margin-left:0.3rem;opacity:0.7;font-size:0.62rem;text-transform:uppercase;">[${entry.level}]</span>
+        <pre style="margin:0.1rem 0 0;white-space:pre-wrap;word-break:break-word;color:${color === '#8B949E' ? 'var(--text-secondary)' : color};font-family:var(--font);font-size:0.72rem;">${escapedMsg}</pre>
+    </div>`;
+}
+
+// Install interceptor ONCE
+if (!window.__appLogInstalled) {
+  window.__appLogInstalled = true;
+  const origError = console.error;
+  const origWarn = console.warn;
+  console.error = function (...args) { addLogEntry('error', ...args); origError.apply(console, args); };
+  console.warn = function (...args) { addLogEntry('warn', ...args); origWarn.apply(console, args); };
+  window.addEventListener('unhandledrejection', (e) => {
+    addLogEntry('error', 'Unhandled Promise Rejection:', e.reason?.message || e.reason || 'Unknown error');
+  });
+  window.addEventListener('error', (e) => {
+    addLogEntry('error', `${e.message} (${e.filename}:${e.lineno})`);
+  });
+  addLogEntry('info', 'App started — log interceptor active.');
+}
+
+// Public API for other modules to push to log
+export function appLog(level, ...args) { addLogEntry(level, ...args); }
+export function getAppLog() { return _appLog; }
+
 const DEFAULT_SETTINGS = {
   geminiApiKey: '',
   claudeApiKey: '',
@@ -306,6 +367,25 @@ export function renderSettingsPage() {
           </div>
         </div>
       </div>
+
+      <!-- Live Error Log -->
+      <div class="settings-card full-width">
+        <div class="settings-card-header">
+          <span class="settings-icon">📋</span>
+          <h2>Live Activity Log</h2>
+          <span id="log-error-count" style="font-size:0.72rem;font-weight:700;margin-left:auto;">No errors</span>
+        </div>
+        <div class="settings-card-body" style="padding:0;">
+          <div style="display:flex;gap:0.4rem;padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <button id="log-clear-btn" style="padding:0.3rem 0.6rem;background:rgba(232,68,68,0.1);color:#e84444;border:1px solid rgba(232,68,68,0.2);border-radius:5px;font-size:0.68rem;font-weight:600;cursor:pointer;">🗑 Clear</button>
+            <button id="log-copy-btn" style="padding:0.3rem 0.6rem;background:rgba(0,191,165,0.1);color:var(--neuro-teal);border:1px solid rgba(0,191,165,0.2);border-radius:5px;font-size:0.68rem;font-weight:600;cursor:pointer;">📋 Copy All</button>
+            <span style="font-size:0.62rem;color:var(--text-muted);margin-left:auto;align-self:center;">Captures errors, warnings, and API failures in real-time</span>
+          </div>
+          <div id="live-log-content" style="max-height:320px;overflow-y:auto;padding:0.5rem 0.75rem;background:#0A0E14;border-radius:0 0 8px 8px;font-family:var(--font);">
+            ${_appLog.length > 0 ? _appLog.map(e => formatLogEntry(e)).join('') : '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.75rem;">No log entries yet. Errors and API failures will appear here automatically.</div>'}
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="settings-actions">
@@ -317,6 +397,36 @@ export function renderSettingsPage() {
   `;
 
   attachSettingsListeners(settings);
+  attachLogListeners();
+}
+
+// ─── Log Panel Listeners ─────────────────────────────────────
+function attachLogListeners() {
+  document.getElementById('log-clear-btn')?.addEventListener('click', () => {
+    _appLog.length = 0;
+    const logEl = document.getElementById('live-log-content');
+    if (logEl) logEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.75rem;">Log cleared.</div>';
+    const counterEl = document.getElementById('log-error-count');
+    if (counterEl) { counterEl.textContent = 'No errors'; counterEl.style.color = 'var(--green, #2EA043)'; }
+    showToast('Log cleared.', 'success');
+  });
+
+  document.getElementById('log-copy-btn')?.addEventListener('click', () => {
+    const text = _appLog.map(e => {
+      const t = e.time.toLocaleTimeString('en-GB', { hour12: false });
+      return `[${t}] [${e.level.toUpperCase()}] ${e.msg}`;
+    }).join('\n');
+    navigator.clipboard.writeText(text || 'No log entries.');
+    showToast('Log copied to clipboard!', 'success');
+  });
+
+  // Update error count on render
+  const counterEl = document.getElementById('log-error-count');
+  if (counterEl) {
+    const errCount = _appLog.filter(e => e.level === 'error').length;
+    counterEl.textContent = errCount > 0 ? `${errCount} error${errCount > 1 ? 's' : ''}` : 'No errors';
+    counterEl.style.color = errCount > 0 ? '#e84444' : 'var(--green, #2EA043)';
+  }
 }
 
 // ─── Attach Settings Event Listeners ─────────────────────────
@@ -392,17 +502,17 @@ function gatherSettingsFromForm() {
   });
 
   return {
-    geminiApiKey: document.getElementById('gemini-key')?.value || '',
-    claudeApiKey: document.getElementById('claude-key')?.value || '',
-    heygenApiKey: document.getElementById('heygen-key')?.value || '',
-    heygenAvatarId: document.getElementById('heygen-avatar')?.value || '',
-    heygenVoiceId: document.getElementById('heygen-voice')?.value || '',
-    manusApiKey: document.getElementById('manus-key')?.value || '',
-    canvaApiToken: document.getElementById('canva-token')?.value || '',
-    canvaPostTemplateId: document.getElementById('canva-template')?.value || '',
-    ghlToken: document.getElementById('ghl-token')?.value || '',
-    ghlLocationId: document.getElementById('ghl-location')?.value || '',
-    ghlEmailFrom: document.getElementById('ghl-email-from')?.value || '',
+    geminiApiKey: (document.getElementById('gemini-key')?.value || '').trim(),
+    claudeApiKey: (document.getElementById('claude-key')?.value || '').trim(),
+    heygenApiKey: (document.getElementById('heygen-key')?.value || '').trim(),
+    heygenAvatarId: (document.getElementById('heygen-avatar')?.value || '').trim(),
+    heygenVoiceId: (document.getElementById('heygen-voice')?.value || '').trim(),
+    manusApiKey: (document.getElementById('manus-key')?.value || '').trim(),
+    canvaApiToken: (document.getElementById('canva-token')?.value || '').trim(),
+    canvaPostTemplateId: (document.getElementById('canva-template')?.value || '').trim(),
+    ghlToken: (document.getElementById('ghl-token')?.value || '').trim(),
+    ghlLocationId: (document.getElementById('ghl-location')?.value || '').trim(),
+    ghlEmailFrom: (document.getElementById('ghl-email-from')?.value || '').trim(),
     publishMethod: document.querySelector('input[name="publish-method"]:checked')?.value || 'csv',
     linkedinGroups: groups,
     brandName: document.getElementById('brand-name')?.value || 'Camino Coaching',

@@ -124,6 +124,7 @@ function clearSession() {
     state.stories = [];
     state.topics = [];
     state.posts = [];
+    state.doneData = {};
     state.weeklyPillars = [];
     state.weeklyFrameworks = [];
     state.weeklyCTAs = [];
@@ -342,19 +343,26 @@ function renderStoryCards() {
 
     container.innerHTML = state.stories.map((story, i) => {
         const chem = story.chemical || {};
-        const source = story.source || (story.sourceUrl ? new URL(story.sourceUrl).hostname.replace('www.', '') : '');
-        const matchMethod = story.urlMatchMethod || 'unverified';
-        const badges = {
-            'gemini-direct': '🟢 Direct',
-            'domain-match': '🔵 Domain',
-            'title-match': '🟡 Title',
-            'path-match': '🟠 Keywords',
-            'best-guess': '🟠 Best Guess',
-            'unverified': '⚪ No URL'
+        const articleTitle = story.sourceArticle || '';
+        const articleUrl = story.articleUrl || story.sourceUrl || '';
+        const sourceDomain = articleUrl ? (() => { try { return new URL(articleUrl).hostname.replace('www.', ''); } catch { return ''; } })() : '';
+        const urlMatch = story.urlMatchMethod || (articleUrl ? 'gemini-direct' : 'unverified');
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        const matchBadges = {
+            'gemini-direct': { label: '✅ Direct', color: '#2EA043', tip: 'URL provided directly by Gemini search' },
+            'domain-match': { label: '🔗 Domain', color: '#00BFA5', tip: 'URL matched by domain name in source' },
+            'title-match': { label: '🔍 Keywords', color: '#DAA520', tip: 'URL matched by title keywords' },
+            'best-guess': { label: '🟡 Best Guess', color: '#E8912A', tip: 'Best available URL — verify before using' },
+            'unverified': { label: '⚠️ No URL', color: '#E84444', tip: 'No URL could be matched from search results' }
         };
-        const badge = badges[matchMethod] || badges['unverified'];
-        const titleMismatch = story.groundingTitle && story.sourceArticle &&
-            story.groundingTitle.toLowerCase().replace(/[^a-z0-9]/g, '') !== story.sourceArticle.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const badge = matchBadges[urlMatch] || matchBadges['unverified'];
+
+        const groundingTitle = story.groundingTitle || '';
+        const titleMismatch = groundingTitle && articleTitle &&
+            groundingTitle.toLowerCase().replace(/[^a-z0-9]/g, '') !== articleTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const summaryText = story.summary || (story.talkingPoints?.length ? story.talkingPoints.join('. ') + '.' : '');
 
         return `
       <div class="story-card" data-index="${i}">
@@ -368,30 +376,71 @@ function renderStoryCards() {
           <span class="story-tag pillar" style="color:${story.pillar?.color || '#888'};">
             ${story.pillar?.icon || ''} ${story.pillar?.name || ''}
           </span>
+          <span style="font-size:0.62rem;color:var(--text-muted);margin-left:auto;">${dayNames[i] || `Day ${i + 1}`}</span>
         </div>
-        <div class="story-card-body">
-          <h3 class="story-headline">${escapeHtml(story.headline || story.topic || '')}</h3>
-          <div style="display:grid;gap:0.35rem;font-size:0.72rem;margin-top:0.5rem;">
-            <div><span style="color:var(--text-muted);font-weight:600;">ARTICLE:</span> <span style="color:var(--text-secondary);">${escapeHtml(story.sourceArticle || story.headline || '')}</span></div>
-            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-              <span style="color:var(--text-muted);font-weight:600;">URL:</span>
-              ${story.articleUrl
-                ? `<a href="${escapeHtml(story.articleUrl)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;">${escapeHtml(story.articleUrl.replace(/^https?:\/\/(www\.)?/, '').substring(0, 50))}</a>`
-                : '<span style="color:var(--text-muted);">—</span>'}
-              <span style="font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:3px;background:rgba(255,255,255,0.06);color:var(--text-muted);">${badge}</span>
-            </div>
-            ${titleMismatch ? `<div style="color:#DAA520;font-size:0.65rem;">⚠️ REAL TITLE: "${escapeHtml(story.groundingTitle)}"</div>` : ''}
-            ${source ? `<div><span style="color:var(--text-muted);font-weight:600;">SOURCE:</span> <span style="color:var(--text-secondary);">${escapeHtml(source)}</span></div>` : ''}
-            ${story.summary ? `<div><span style="color:var(--text-muted);font-weight:600;">SUMMARY:</span> <span style="color:var(--text-secondary);">${escapeHtml(story.summary)}</span></div>` : ''}
-            ${story.killerDataPoint ? `<div><span style="color:#DAA520;font-weight:600;">KILLER DATA POINT:</span> <span style="color:var(--text-primary);font-weight:500;">"${escapeHtml(story.killerDataPoint)}"</span></div>` : ''}
-            ${story.businessRelevance ? `<div><span style="color:var(--neuro-teal,#00BFA5);font-weight:600;">BUSINESS RELEVANCE:</span> <span style="color:var(--text-secondary);">${escapeHtml(story.businessRelevance)}</span></div>` : ''}
+        <div class="story-card-body" style="padding:0.6rem 0.8rem;">
+          <h3 class="story-headline" style="margin:0 0 0.5rem;font-size:0.95rem;line-height:1.3;">${escapeHtml(story.headline || story.topic || '')}</h3>
+
+          <div style="margin-bottom:0.35rem;">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--neuro-teal);letter-spacing:0.5px;">ARTICLE:</span>
+            <span style="font-size:0.75rem;color:var(--text-primary);margin-left:0.3rem;">${escapeHtml(articleTitle || groundingTitle || 'No article title')}</span>
           </div>
+
+          <div style="margin-bottom:0.35rem;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--neuro-teal);letter-spacing:0.5px;">URL:</span>
+            ${articleUrl
+                ? `<a href="${escapeHtml(articleUrl)}" target="_blank" rel="noopener" style="font-size:0.7rem;color:var(--neuro-teal);word-break:break-all;text-decoration:underline;" onclick="event.stopPropagation();">${escapeHtml(articleUrl.length > 70 ? articleUrl.substring(0, 70) + '...' : articleUrl)}</a>`
+                : `<span style="font-size:0.7rem;color:var(--text-muted);font-style:italic;">No URL found</span>`}
+            <span style="font-size:0.58rem;padding:0.1rem 0.3rem;border-radius:3px;background:${badge.color}18;color:${badge.color};border:1px solid ${badge.color}30;font-weight:600;" title="${badge.tip}">${badge.label}</span>
+          </div>
+
+          ${titleMismatch ? `
+          <div style="margin-bottom:0.35rem;padding:0.25rem 0.5rem;background:rgba(232,145,42,0.08);border-radius:4px;border-left:2px solid #E8912A;">
+            <span style="font-size:0.62rem;color:#E8912A;font-weight:700;">🔍 REAL TITLE:</span>
+            <span style="font-size:0.68rem;color:var(--text-secondary);font-style:italic;margin-left:0.2rem;">${escapeHtml(groundingTitle)}</span>
+          </div>` : ''}
+
+          ${story.source ? `
+          <div style="margin-bottom:0.35rem;">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--neuro-teal);letter-spacing:0.5px;">SOURCE:</span>
+            <span style="font-size:0.72rem;color:var(--text-secondary);margin-left:0.3rem;">${escapeHtml(story.source)}</span>
+          </div>` : (sourceDomain ? `
+          <div style="margin-bottom:0.35rem;">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--neuro-teal);letter-spacing:0.5px;">SOURCE:</span>
+            <span style="font-size:0.72rem;color:var(--text-secondary);margin-left:0.3rem;">${escapeHtml(sourceDomain)}</span>
+          </div>` : '')}
+
+          ${summaryText ? `
+          <div style="margin-bottom:0.35rem;">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--neuro-teal);letter-spacing:0.5px;">SUMMARY:</span>
+            <p style="font-size:0.72rem;color:var(--text-secondary);line-height:1.5;margin:0.15rem 0 0;">${escapeHtml(summaryText)}</p>
+          </div>` : ''}
+
+          ${story.killerDataPoint ? `
+          <div style="margin-bottom:0.35rem;padding:0.3rem 0.5rem;background:rgba(218,165,32,0.08);border-radius:4px;border-left:2px solid var(--gold);">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--gold);letter-spacing:0.5px;">📊 KILLER DATA POINT:</span>
+            <p style="font-size:0.72rem;color:var(--gold);line-height:1.4;margin:0.15rem 0 0;font-weight:600;">"${escapeHtml(story.killerDataPoint)}"</p>
+          </div>` : ''}
+
+          ${story.businessRelevance ? `
+          <div style="margin-bottom:0.2rem;padding:0.3rem 0.5rem;background:rgba(0,191,165,0.06);border-radius:4px;border-left:2px solid var(--neuro-teal);">
+            <span style="font-size:0.68rem;font-weight:700;color:var(--neuro-teal);letter-spacing:0.5px;">💼 BUSINESS RELEVANCE:</span>
+            <p style="font-size:0.72rem;color:var(--text-secondary);line-height:1.4;margin:0.15rem 0 0;font-style:italic;">${escapeHtml(story.businessRelevance)}</p>
+          </div>` : ''}
+
+          ${story.mechanism ? `
+          <div style="margin-top:0.2rem;">
+            <span style="font-size:0.62rem;color:var(--text-muted);">🧠 ${escapeHtml(story.mechanism)}</span>
+          </div>` : ''}
         </div>
+
         <div class="story-card-actions">
+          <button class="story-generate-btn" onclick="window.appActions.regenerateStory(${i})" style="font-size:0.7rem;padding:0.3rem 0.6rem;background:none;border:1px solid var(--border);color:var(--text-muted);" title="Find a different story for this slot">
+            🔄 Swap
+          </button>
           <button class="story-generate-btn" onclick="window.appActions.generateStory(${i})">
             Generate →
           </button>
-          <button class="post-action-btn" onclick="window.appActions.swapStory(${i})" style="font-size:0.65rem;color:var(--text-muted);">🔄 Swap</button>
         </div>
       </div>
     `;
@@ -984,36 +1033,107 @@ window.appActions = {
     },
 
     async swapStory(index) {
+        // Delegate to regenerateStory (enhanced version)
+        return this.regenerateStory(index);
+    },
+
+    // Regenerate a single story without affecting the rest (Rider-style)
+    async regenerateStory(index) {
         const settings = loadSettings();
         if (!settings.geminiApiKey) { showToast('Gemini API key needed.', 'error'); return; }
 
-        setStatus(`🔄 Swapping story ${index + 1}...`, true);
+        const card = document.querySelector(`.story-card[data-index="${index}"]`);
+        if (card) {
+            const actionsEl = card.querySelector('.story-card-actions');
+            if (actionsEl) actionsEl.innerHTML = `<span style="color:var(--neuro-teal);font-size:0.75rem;font-weight:600;">🔄 Finding new story...</span>`;
+            card.style.opacity = '0.6';
+        }
+
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const pillar = state.weeklyPillars[index];
+        const slot = WEEKLY_SCHEDULE[index];
+        const existingHeadlines = state.stories.map(s => s.headline || s.topic || '').filter(Boolean);
+
+        setStatus(`🔄 Finding replacement story for ${dayNames[index] || `Day ${index + 1}`}...`, true);
+
         try {
-            const pillar = state.weeklyPillars[index];
-            const slot = WEEKLY_SCHEDULE[index];
-            const prompt = `Search the web for 1 NEW story from the last 7-30 days about ${pillar?.name || 'leadership performance'}.
+            const prompt = `Search the web for 1 NEW story from the last 7-30 days for a business leadership mental performance coach's LinkedIn.
+
+SLOT: ${dayNames[index] || `Day ${index + 1}`}: ${slot?.contentType || pillar?.name || 'Leadership Performance'} — ${slot?.dayBrief || pillar?.description || ''}
 SEARCH FOCUS: ${slot?.searchFocus || 'leadership mental performance neuroscience'}
-Find a DIFFERENT story from: ${state.stories[index]?.headline || ''}
-Return a JSON array with exactly 1 object: [{"pillarId":"${pillar?.id || 'hidden-cost'}","headline":"...","sourceArticle":"...","articleUrl":"...","source":"...","summary":"...","talkingPoints":["..."],"killerDataPoint":"...","emotionalHook":"...","mechanism":"...","businessRelevance":"...","contentBrief":"..."}]
+
+DO NOT use any of these stories (already in use):
+${existingHeadlines.map(h => `- ${h}`).join('\n')}
+
+SEARCH SOURCES: Harvard Business Review, McKinsey Quarterly, Financial Times, The Economist, Nature, Science, Stanford GSB, MIT Sloan, Wall Street Journal, Forbes, Wired, TED, BBC World, neuroscience journals, sports psychology studies, biohacking research.
+NO YOUTUBE — only written articles.
+
+CRITICAL URL RULE: The "articleUrl" MUST be a real, working URL from the Google Search results you received. Do NOT invent URLs. If you cannot find one, set articleUrl to "".
+
+Return a JSON array with exactly 1 object:
+[{
+    "headline": "Compelling headline connecting the story to leadership mental performance",
+    "sourceArticle": "Article title — Publication",
+    "articleUrl": "REAL URL from search results",
+    "source": "Publication name | Date published",
+    "summary": "3 sentences describing the key finding",
+    "talkingPoints": ["Point 1", "Point 2", "Point 3"],
+    "killerDataPoint": "Specific number, percentage, or direct quote",
+    "emotionalHook": "What should the business leader feel?",
+    "mechanism": "Neuroscience mechanism",
+    "businessRelevance": "One sentence connecting to business leadership",
+    "contentBrief": "Type of post"
+}]
+
 Return ONLY the JSON array.`;
-            const results = await generateTopics([pillar], state.seasonalContext, settings.geminiApiKey);
-            if (results?.[0]) {
-                state.topics[index] = results[0];
+
+            const result = await callGeminiWithSearch(prompt, settings.geminiApiKey, true);
+            const newStory = Array.isArray(result) ? result[0] : result;
+
+            if (newStory) {
+                // Preserve the pillar/framework/cta from the old story
+                const oldStory = state.stories[index];
+                state.topics[index] = newStory;
                 state.stories[index] = {
-                    ...results[0],
-                    pillar: state.weeklyPillars[index],
-                    framework: state.weeklyFrameworks[index],
-                    cta: state.weeklyCTAs[index],
-                    chemical: assignChemical(results[0], state.weeklyPillars[index]),
-                    postType: state.weeklyFrameworks[index]?.name || 'Familiar'
+                    ...newStory,
+                    pillar: oldStory.pillar,
+                    framework: oldStory.framework,
+                    cta: oldStory.cta,
+                    chemical: oldStory.chemical,
+                    postType: oldStory.postType,
+                    angle: newStory.emotionalHook || newStory.businessRelevance || ''
                 };
-                renderStoryCards();
+
+                // Clear any generated post for this slot
+                if (state.posts[index]) state.posts[index] = null;
+
                 saveSession();
-                showToast(`Story ${index + 1} swapped!`, 'success');
+                renderStoryCards();
+                showToast(`🔄 Story ${index + 1} swapped!`, 'success');
+            } else {
+                showToast('Could not find a replacement story. Try again.', 'error');
             }
         } catch (err) {
-            showToast(`Swap error: ${err.message}`, 'error');
+            showToast(`Error: ${err.message}`, 'error');
+            if (card) {
+                card.style.opacity = '1';
+                const actionsEl = card.querySelector('.story-card-actions');
+                if (actionsEl) actionsEl.innerHTML = `
+                    <button class="story-generate-btn" onclick="window.appActions.regenerateStory(${index})" style="font-size:0.7rem;padding:0.3rem 0.6rem;background:none;border:1px solid var(--border);color:var(--text-muted);">🔄 Swap</button>
+                    <button class="story-generate-btn" onclick="window.appActions.generateStory(${index})">Generate →</button>
+                `;
+            }
         } finally { setStatus('Ready'); }
+    },
+
+    // Preview email in new window
+    previewEmail(index) {
+        const post = state.posts[index];
+        if (post?.emailHTML) {
+            const w = window.open('', '_blank', 'width=640,height=800');
+            w.document.write(post.emailHTML);
+            w.document.close();
+        } else { showToast('Confirm the post first to generate the email.', 'info'); }
     },
 
     // ─── Copy helpers ───────────────────────────────────────────

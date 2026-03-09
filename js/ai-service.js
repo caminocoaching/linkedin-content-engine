@@ -641,11 +641,13 @@ export async function callClaude(prompt, apiKey, parseJson = true) {
         throw new Error('Claude API key not configured. Go to Settings to add your key.');
     }
 
+    const cleanKey = apiKey.trim();
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': apiKey,
+            'x-api-key': cleanKey,
             'anthropic-version': '2023-06-01',
             'anthropic-dangerous-direct-browser-access': 'true'
         },
@@ -660,7 +662,10 @@ export async function callClaude(prompt, apiKey, parseJson = true) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error?.message || `Claude API error: ${response.status}`);
+        const errMsg = error.error?.message || `Claude API error: ${response.status}`;
+        const keyHint = cleanKey ? `Key starts with: ${cleanKey.substring(0, 10)}...` : 'NO KEY PROVIDED';
+        console.error(`[Claude API] ${response.status} — ${errMsg}\n${keyHint}\nModel: claude-sonnet-4-20250514\nFull error:`, error);
+        throw new Error(errMsg);
     }
 
     const data = await response.json();
