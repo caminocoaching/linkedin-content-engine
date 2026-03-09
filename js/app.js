@@ -629,6 +629,9 @@ function renderInlinePlatforms(post, index) {
 
 // ─── Inline Email Render ──────────────────────────────────────
 function renderInlineEmail(post, index) {
+    // For srcdoc, we only need to escape double-quotes (for the attribute), NOT HTML tags
+    const srcdocHtml = (post.emailHTML || '').replace(/"/g, '&quot;');
+
     return `
     <div class="production-slot" id="email-slot-${index}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
@@ -636,11 +639,12 @@ function renderInlineEmail(post, index) {
         <div style="display:flex;gap:0.35rem;">
           <button class="post-action-btn" onclick="window.appActions.copyEmailHTML(${index})" style="color:var(--gold);">📋 Copy HTML</button>
           <button class="post-action-btn" onclick="window.appActions.copyEmailSubject(${index})">📝 Subject</button>
+          <button class="post-action-btn" onclick="window.appActions.previewEmail(${index})">👁️ Preview</button>
         </div>
       </div>
       <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.4rem;">Subject: <strong style="color:var(--gold);">${escapeHtml(post.emailSubject || '')}</strong></div>
-      <div style="border:1px solid rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;background:#0D1117;">
-        <iframe id="email-frame-${index}" style="width:100%;height:320px;border:none;" srcdoc="${escapeHtml(post.emailHTML || '')}"></iframe>
+      <div style="border:1px solid rgba(255,255,255,0.06);border-radius:8px;overflow:hidden;background:white;">
+        <iframe id="email-frame-${index}" style="width:100%;height:400px;border:none;" srcdoc="${srcdocHtml}"></iframe>
       </div>
     </div>`;
 }
