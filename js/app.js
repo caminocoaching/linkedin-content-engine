@@ -17,7 +17,7 @@ import {
 
 import {
     generateTopics, generatePost, generatePosts, regeneratePost, generateImagePrompt,
-    generateVideoScript, generateShortsScript, adaptPostForPlatforms, storeUsedArticles, storeUsedHooks,
+    generateVideoScript, generateShortsScript, storeUsedArticles, storeUsedHooks,
     generateEmail, renderEmailHTML, callClaude, callGeminiWithSearch
 } from './ai-service.js';
 
@@ -560,9 +560,7 @@ function renderPosts() {
                 }
               <button class="post-action-btn" onclick="window.appActions.confirmPost(${i})" style="background:rgba(46,160,67,0.12);color:var(--green,#2EA043);border:1px solid rgba(46,160,67,0.2);border-radius:6px;font-weight:700;">✅ Confirm</button>
             ` : `
-              <button class="post-action-btn" onclick="window.appActions.copyPost(${i})">📋 LinkedIn</button>
-              <button class="post-action-btn" onclick="window.appActions.copyFacebook(${i})" style="color:#1877F2;">📋 Facebook</button>
-              <button class="post-action-btn" onclick="window.appActions.copyInstagram(${i})" style="color:#E1306C;">📋 Instagram</button>
+              <button class="post-action-btn" onclick="window.appActions.copyPost(${i})">📋 Copy LinkedIn</button>
               <button class="post-action-btn" onclick="window.appActions.unconfirmPost(${i})" style="color:var(--text-muted);font-size:0.65rem;">↩ Edit</button>
             `}
           </div>
@@ -592,11 +590,10 @@ function renderPosts() {
     }).join('');
 }
 
-// ─── Production Kit (FB + IG + Email + Video) ─────────────────
+// ─── Production Kit (Email + Video + Shorts) ─────────────────
 function renderProductionKit(post, index) {
     return `
     <div class="production-kit" id="production-kit-${index}">
-      ${post.facebook ? renderInlinePlatforms(post, index) : `<div id="platforms-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating Facebook + Instagram versions...</div>`}
       ${post.emailHTML ? renderInlineEmail(post, index) : `<div id="email-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating email HTML...</div>`}
       ${post.videoNarration ? renderInlineVideo(post, index) : `<div id="video-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating video script...</div>`}
       ${post.shortsNarration ? renderInlineShorts(post, index) : `<div id="shorts-slot-${index}" class="production-slot"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Generating 30s shorts script...</div>`}
@@ -894,29 +891,9 @@ window.appActions = {
         const chemData = CHEM_DATA[post.pillar?.id] || { id: 'dopamine' };
         const fullTopic = state.topics[index] || post.topic || {};
 
-        setStatus(`📧🎬 Post ${index + 1}: Generating FB, IG, email, video...`, true);
+        setStatus(`📧🎬 Post ${index + 1}: Generating email, video, shorts...`, true);
 
         const promises = [];
-
-        // 1. Facebook + Instagram versions
-        if (!post.facebook) {
-            promises.push(
-                adaptPostForPlatforms({
-                    postContent: post.content,
-                    pillar: post.pillar,
-                    cta: post.cta,
-                    apiKey: settings.claudeApiKey
-                }).then(platforms => {
-                    post.facebook = platforms.facebook;
-                    post.instagram = platforms.instagram;
-                    const slot = document.getElementById(`platforms-slot-${index}`);
-                    if (slot) slot.outerHTML = renderInlinePlatforms(post, index);
-                }).catch(err => {
-                    const slot = document.getElementById(`platforms-slot-${index}`);
-                    if (slot) slot.innerHTML = `<span style="color:#e84444;font-size:0.75rem;">❌ Platform error: ${err.message}</span>`;
-                })
-            );
-        }
 
         // 2. Email HTML
         if (!post.emailHTML) {
@@ -1021,7 +998,7 @@ window.appActions = {
         await Promise.all(promises);
         saveSession();
         setStatus('Ready');
-        showToast(`Post ${index + 1}: all outputs ready! LinkedIn, Facebook, Instagram, Email, Video, Shorts.`, 'success');
+        showToast(`Post ${index + 1}: all outputs ready! LinkedIn, Email, Video, Shorts.`, 'success');
     },
 
     unconfirmPost(index) {
