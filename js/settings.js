@@ -368,6 +368,30 @@ export function renderSettingsPage() {
         </div>
       </div>
 
+      <!-- Session & Cache Management -->
+      <div class="settings-card full-width">
+        <div class="settings-card-header">
+          <span class="settings-icon">🧹</span>
+          <h2>Session & Cache</h2>
+        </div>
+        <div class="settings-card-body">
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+              <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.3rem;">Clears all generated stories, posts, and cached content. <strong style="color:var(--neuro-teal);">Your API keys and settings are kept.</strong></p>
+              <p style="font-size:0.68rem;color:var(--text-muted);margin:0;">Removes: session data, stories, posts, confirmed outputs, deduplication history.</p>
+            </div>
+            <button id="clear-session-settings-btn" style="padding:0.5rem 1.2rem;background:rgba(232,68,68,0.1);color:#e84444;border:1px solid rgba(232,68,68,0.25);border-radius:6px;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap;">🗑 Clear Session Cache</button>
+          </div>
+          <div id="clear-session-confirm" style="display:none;margin-top:0.75rem;padding:0.6rem 0.8rem;background:rgba(232,68,68,0.06);border:1px solid rgba(232,68,68,0.15);border-radius:6px;">
+            <p style="font-size:0.78rem;color:#e84444;font-weight:600;margin:0 0 0.4rem;">⚠️ Are you sure? This will delete all stories and posts from this session.</p>
+            <div style="display:flex;gap:0.5rem;">
+              <button id="clear-session-yes-btn" style="padding:0.35rem 0.8rem;background:#e84444;color:white;border:none;border-radius:5px;font-weight:700;font-size:0.75rem;cursor:pointer;">Yes, Clear Everything</button>
+              <button id="clear-session-no-btn" style="padding:0.35rem 0.8rem;background:rgba(255,255,255,0.08);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:5px;font-size:0.75rem;cursor:pointer;">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Live Error Log -->
       <div class="settings-card full-width">
         <div class="settings-card-header">
@@ -427,6 +451,30 @@ function attachLogListeners() {
     counterEl.textContent = errCount > 0 ? `${errCount} error${errCount > 1 ? 's' : ''}` : 'No errors';
     counterEl.style.color = errCount > 0 ? '#e84444' : 'var(--green, #2EA043)';
   }
+
+  // ─── Clear Session Cache ─────────────────────────────────
+  document.getElementById('clear-session-settings-btn')?.addEventListener('click', () => {
+    document.getElementById('clear-session-confirm').style.display = 'block';
+  });
+
+  document.getElementById('clear-session-no-btn')?.addEventListener('click', () => {
+    document.getElementById('clear-session-confirm').style.display = 'none';
+  });
+
+  document.getElementById('clear-session-yes-btn')?.addEventListener('click', () => {
+    // Remove session data (stories, posts, doneData) — NOT settings
+    localStorage.removeItem('businessLinkedIn_session');
+    // Remove deduplication caches
+    localStorage.removeItem('business-social-media-used-articles');
+    localStorage.removeItem('business-social-media-used-hooks');
+    // Hide confirmation
+    document.getElementById('clear-session-confirm').style.display = 'none';
+    // Reset UI containers if they exist
+    document.getElementById('stories-container')?.classList.add('hidden');
+    document.getElementById('posts-container')?.classList.add('hidden');
+    addLogEntry('info', 'Session cache cleared. API keys and settings preserved.');
+    showToast('Session cleared! Stories and posts wiped. Your API keys are safe. 🧹', 'success');
+  });
 }
 
 // ─── Attach Settings Event Listeners ─────────────────────────
