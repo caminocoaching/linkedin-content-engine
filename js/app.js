@@ -19,7 +19,7 @@ import {
     generateTopics, generatePost, generatePosts, regeneratePost, generateImagePrompt,
     generateVideoScript, generateShortsScript, storeUsedArticles, storeUsedHooks,
     generateEmail, renderEmailHTML, callClaude, callGeminiWithSearch
-} from './ai-service.js';
+} from './ai-service.js?v=20260311a';
 
 import {
     createManusSlideTask, checkManusTaskStatus,
