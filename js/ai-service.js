@@ -695,6 +695,75 @@ export async function callClaude(prompt, apiKey, parseJson = true) {
     return content;
 }
 
+// ─── Resolve Google Grounding API Redirect URLs to Real URLs ────
+// Uses Vercel serverless function (/api/resolve-url) to bypass CORS.
+// Browser-side fetch CANNOT follow cross-origin redirects from Google's
+// grounding-api-redirect URLs because the target sites don't set CORS headers.
+async function resolveRedirectUrl(redirectUrl, timeoutMs = 8000) {
+    if (!redirectUrl || !redirectUrl.includes('grounding-api-redirect')) {
+        return redirectUrl;
+    }
+
+    // Strategy 1: Server-side resolution via Vercel Edge Function (no CORS issues)
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const apiUrl = `/api/resolve-url?url=${encodeURIComponent(redirectUrl)}`;
+        const response = await fetch(apiUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.resolvedUrl && data.resolvedUrl !== redirectUrl && !data.resolvedUrl.includes('grounding-api-redirect')) {
+                console.log(`[URL Resolve] ✅ Server-side → ${data.resolvedUrl}`);
+                return data.resolvedUrl;
+            }
+        }
+    } catch (e) {
+        console.warn(`[URL Resolve] Server-side failed: ${e.message} — trying direct...`);
+    }
+
+    // Strategy 2: Direct browser fetch (usually fails due to CORS, but works locally sometimes)
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(redirectUrl, {
+            method: 'HEAD',
+            redirect: 'follow',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.url && response.url !== redirectUrl && !response.url.includes('grounding-api-redirect')) {
+            console.log(`[URL Resolve] ✅ Direct HEAD → ${response.url}`);
+            return response.url;
+        }
+    } catch (e) {
+        // Expected to fail (CORS) — this is why the server-side API exists
+    }
+
+    console.warn(`[URL Resolve] ❌ Could not resolve: ${redirectUrl.substring(0, 80)}...`);
+    return redirectUrl;
+}
+
+async function resolveAllRedirectUrls(chunks) {
+    if (!chunks || chunks.length === 0) return chunks;
+    const redirectChunks = chunks.filter(c => c.uri?.includes('grounding-api-redirect'));
+    if (redirectChunks.length === 0) return chunks;
+
+    console.log(`[URL Resolve] Resolving ${redirectChunks.length} redirect URLs...`);
+    const resolvedResults = await Promise.allSettled(
+        chunks.map(async (chunk) => {
+            const resolvedUri = await resolveRedirectUrl(chunk.uri);
+            return { ...chunk, uri: resolvedUri, originalUri: chunk.uri };
+        })
+    );
+    const resolved = resolvedResults.map((result, i) =>
+        result.status === 'fulfilled' ? result.value : chunks[i]
+    );
+    const successCount = resolved.filter(c => !c.uri?.includes('grounding-api-redirect')).length;
+    console.log(`[URL Resolve] Done: ${successCount} resolved, ${resolved.length - successCount} still redirect URLs`);
+    return resolved;
+}
+
 // ─── Gemini API Call with Google Search Grounding — Research ────
 export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
     if (!apiKey) {
@@ -713,7 +782,7 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
                 tools: [{ google_search: {} }],
                 generationConfig: {
                     temperature: 0.8,
-                    maxOutputTokens: 8192
+                    maxOutputTokens: 16384
                 }
             })
         }
@@ -727,15 +796,23 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
     const data = await response.json();
     console.log('[Gemini] Raw response:', JSON.stringify(data).substring(0, 500));
 
+    // Extract text content — skip 'thought' parts from Gemini 2.5 thinking models
     let content = '';
-    if (data.candidates?.[0]?.content?.parts) {
-        for (const part of data.candidates[0].content.parts) {
-            if (part.text) content += part.text;
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const thoughtParts = [];
+    const outputParts = [];
+    for (const part of parts) {
+        if (part.thought) {
+            thoughtParts.push(part);
+        } else if (part.text) {
+            outputParts.push(part);
+            content += part.text;
         }
     }
+    console.log(`[Gemini] Parts: ${parts.length} total, ${thoughtParts.length} thought, ${outputParts.length} output`);
 
-    // Extract REAL URLs from Gemini's grounding metadata
-    const groundingChunks = [];
+    // Extract URLs from Gemini's grounding metadata
+    let groundingChunks = [];
     try {
         const gm = data.candidates?.[0]?.groundingMetadata;
         console.log('[Gemini] groundingMetadata keys:', gm ? Object.keys(gm) : 'NONE');
@@ -753,16 +830,16 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
                 }
             }
         }
-        // Log redirect vs real URL counts
-        const redirectCount = groundingChunks.filter(gc => gc.uri.includes('grounding-api-redirect') || gc.uri.includes('vertexaisearch')).length;
-        if (redirectCount > 0) {
-            console.warn(`[Gemini] ⚠️ ${redirectCount}/${groundingChunks.length} grounding chunks are redirect URLs (will be filtered)`);
-        }
     } catch (e) {
         console.warn('[Gemini] Error extracting grounding metadata:', e);
     }
 
-    console.log(`[Gemini] Found ${groundingChunks.length} grounding chunks:`, groundingChunks.map(c => c.uri));
+    console.log(`[Gemini] Found ${groundingChunks.length} grounding chunks (pre-resolve):`, groundingChunks.map(c => c.uri.substring(0, 80)));
+
+    // Resolve redirect URLs to real URLs
+    groundingChunks = await resolveAllRedirectUrls(groundingChunks);
+
+    console.log(`[Gemini] Grounding chunks (post-resolve):`, groundingChunks.map(c => c.uri));
 
     // Strip markdown code fences if present
     content = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
@@ -771,6 +848,7 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
         const blockReason = data.candidates?.[0]?.finishReason;
         const safetyRatings = data.candidates?.[0]?.safetyRatings;
         console.error('[Gemini] No content. Finish reason:', blockReason, 'Safety:', safetyRatings);
+        console.error('[Gemini] Full candidate:', JSON.stringify(data.candidates?.[0]).substring(0, 1000));
 
         // Auto-retry on RECITATION block
         if (blockReason === 'RECITATION' && !prompt.includes('[RETRY]')) {
@@ -781,25 +859,106 @@ export async function callGeminiWithSearch(prompt, apiKey, parseJson = true) {
             return callGeminiWithSearch(retryPrompt, apiKey, parseJson);
         }
 
-        throw new Error(`No content from Gemini (reason: ${blockReason || 'unknown'}). Try again.`);
+        // Auto-retry on STOP with no content (Gemini 2.5 thinking model edge case)
+        // The model spent all tokens on internal reasoning and produced no output.
+        // Retry with thinking disabled to force actual output.
+        if (blockReason === 'STOP' && !prompt.includes('[STOP-RETRY]')) {
+            console.warn('[Gemini] STOP with no content — retrying with thinking disabled...');
+            const retryResponse = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: dedupPrompt + '\n\n[STOP-RETRY] Return the JSON array immediately.' }] }],
+                        tools: [{ google_search: {} }],
+                        generationConfig: {
+                            temperature: 0.8,
+                            maxOutputTokens: 16384,
+                            thinkingConfig: { thinkingBudget: 0 }
+                        }
+                    })
+                }
+            );
+            if (retryResponse.ok) {
+                const retryData = await retryResponse.json();
+                console.log('[Gemini] STOP-RETRY response:', JSON.stringify(retryData).substring(0, 500));
+                let retryContent = '';
+                const retryParts = retryData.candidates?.[0]?.content?.parts || [];
+                for (const part of retryParts) {
+                    if (part.text && !part.thought) retryContent += part.text;
+                }
+                retryContent = retryContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+                if (retryContent) {
+                    console.log('[Gemini] STOP-RETRY succeeded — got content');
+                    content = retryContent;
+                    // Update grounding chunks from retry
+                    const retryGm = retryData.candidates?.[0]?.groundingMetadata;
+                    if (retryGm?.groundingChunks) {
+                        groundingChunks = [];
+                        for (const chunk of retryGm.groundingChunks) {
+                            if (chunk.web?.uri) {
+                                groundingChunks.push({ uri: chunk.web.uri, title: chunk.web.title || '' });
+                            }
+                        }
+                        groundingChunks = await resolveAllRedirectUrls(groundingChunks);
+                    }
+                }
+            }
+        }
+
+        if (!content) {
+            throw new Error(`No content from Gemini (reason: ${blockReason || 'unknown'}). Try again.`);
+        }
     }
 
     if (parseJson) {
         try {
-            const jsonMatch = content.match(/\[[\s\S]*\]/);
-            let parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+            // Try multiple approaches to extract JSON array
+            let parsed;
+
+            // Approach 1: Direct parse (cleanest)
+            try { parsed = JSON.parse(content); } catch { }
+
+            // Approach 2: Find JSON array with balanced brackets
+            if (!parsed) {
+                const arrStart = content.indexOf('[');
+                if (arrStart !== -1) {
+                    let depth = 0;
+                    let arrEnd = -1;
+                    for (let i = arrStart; i < content.length; i++) {
+                        if (content[i] === '[') depth++;
+                        else if (content[i] === ']') { depth--; if (depth === 0) { arrEnd = i; break; } }
+                    }
+                    if (arrEnd > arrStart) {
+                        try { parsed = JSON.parse(content.substring(arrStart, arrEnd + 1)); } catch { }
+                    }
+                }
+            }
+
+            // Approach 3: Greedy regex fallback
+            if (!parsed) {
+                const jsonMatch = content.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    try { parsed = JSON.parse(jsonMatch[0]); } catch { }
+                }
+            }
+
+            if (!parsed) {
+                throw new Error('Could not extract JSON from Gemini response');
+            }
 
             if (Array.isArray(parsed)) {
-                // Helper: check if a URL is a Gemini redirect (not a real article URL)
+                // Helper: check if a URL is still an unresolved Gemini redirect
                 const isRedirectUrl = (u) => u.includes('grounding-api-redirect') || u.includes('googleapis.com') || u.includes('vertexaisearch');
 
-                // Filter out YouTube AND grounding redirect URLs from chunks
+                // Filter out YouTube from chunks (redirect URLs are already resolved above)
                 const cleanChunks = groundingChunks.filter(gc =>
                     !gc.uri.includes('youtube.com') && !gc.uri.includes('youtu.be') && !isRedirectUrl(gc.uri)
                 );
                 const usedChunkIdxs = new Set();
 
-                console.log(`[URL] ${cleanChunks.length} real grounding chunks (filtered redirects + YouTube):`);
+                console.log(`[URL] ${cleanChunks.length} usable grounding chunks (after resolve + YouTube filter):`);
                 cleanChunks.forEach((c, i) => console.log(`  [${i}] ${c.uri} — "${c.title}"`));
 
                 const wordSimilarity = (textA, textB) => {
