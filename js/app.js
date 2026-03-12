@@ -157,6 +157,77 @@ function escapeHtml(text) {
 }
 
 
+// ─── Parse Video Script into Per-Slide Sections ──────────────
+function parseVideoSlides(rawScript) {
+    if (!rawScript) return [];
+    const scriptMatch = rawScript.match(/=== VIDEO SCRIPT ===\s*([\s\S]*?)(?:=== SLIDE DECK|$)/i);
+    const narration = (scriptMatch?.[1] || rawScript).trim();
+
+    const slidePatterns = [
+        { label: 'Hook', icon: '🎯', timing: '0-5s', slide: 1, regex: /(?:^|\n)\s*HOOK\s*(?:\([^)]*\))?\s*:\s*([\s\S]*?)(?=\n\s*(?:SCENARIO|THE SCIENCE|THE COST|THE BRIDGE|CTA)\s*(?:\(|:)|$)/i },
+        { label: 'Scenario', icon: '🎬', timing: '5-15s', slide: 2, regex: /(?:^|\n)\s*SCENARIO\s*(?:\([^)]*\))?\s*:\s*([\s\S]*?)(?=\n\s*(?:THE SCIENCE|THE COST|THE BRIDGE|CTA)\s*(?:\(|:)|$)/i },
+        { label: 'The Science', icon: '🧪', timing: '15-35s', slide: 3, regex: /(?:^|\n)\s*THE SCIENCE\s*(?:\([^)]*\))?\s*:\s*([\s\S]*?)(?=\n\s*(?:THE COST|THE BRIDGE|CTA)\s*(?:\(|:)|$)/i },
+        { label: 'The Cost', icon: '📊', timing: '35-45s', slide: 4, regex: /(?:^|\n)\s*THE COST\s*(?:\([^)]*\))?\s*:\s*([\s\S]*?)(?=\n\s*(?:THE BRIDGE|CTA)\s*(?:\(|:)|$)/i },
+        { label: 'The Bridge', icon: '🌉', timing: '45-55s', slide: 5, regex: /(?:^|\n)\s*THE BRIDGE\s*(?:\([^)]*\))?\s*:\s*([\s\S]*?)(?=\n\s*CTA\s*(?:\(|:)|$)/i },
+        { label: 'CTA', icon: '📢', timing: '55-60s', slide: 6, regex: /(?:^|\n)\s*CTA\s*(?:\([^)]*\))?\s*:\s*([\s\S]*?)$/i }
+    ];
+
+    const slides = [];
+    for (const p of slidePatterns) {
+        const match = narration.match(p.regex);
+        if (match && match[1]?.trim()) {
+            slides.push({ label: p.label, icon: p.icon, timing: p.timing, slide: p.slide, content: match[1].replace(/^\[|\]$/g, '').trim() });
+        }
+    }
+    return slides;
+}
+
+// ─── Parse 30s Shorts Script into Per-Slide Sections ─────────
+function parseShortsSlides(rawScript) {
+    if (!rawScript) return [];
+    const scriptMatch = rawScript.match(/=== SHORTS SCRIPT[^=]*===\s*([\s\S]*?)(?:=== SHORTS SLIDE|$)/i);
+    const narration = (scriptMatch?.[1] || rawScript).trim();
+
+    const slidePatterns = [
+        { label: 'Hook', icon: '🎯', timing: '0-5s', slide: 1, regex: /(?:^|\n)\s*HOOK\s*(?:\([^)]*\))?\s*(?:\|\s*Slide\s*\d+\s*)?\s*:\s*([\s\S]*?)(?=\n\s*(?:THE INSIGHT|THE PROOF|CTA)\s*(?:\(|\|)|$)/i },
+        { label: 'The Insight', icon: '🧪', timing: '5-18s', slide: 2, regex: /(?:^|\n)\s*THE INSIGHT\s*(?:\([^)]*\))?\s*(?:\|\s*Slide\s*\d+\s*)?\s*:\s*([\s\S]*?)(?=\n\s*(?:THE PROOF|CTA)\s*(?:\(|\|)|$)/i },
+        { label: 'The Proof', icon: '📊', timing: '18-25s', slide: 3, regex: /(?:^|\n)\s*THE PROOF\s*(?:\([^)]*\))?\s*(?:\|\s*Slide\s*\d+\s*)?\s*:\s*([\s\S]*?)(?=\n\s*CTA\s*(?:\(|\|)|$)/i },
+        { label: 'CTA', icon: '📢', timing: '25-30s', slide: 4, regex: /(?:^|\n)\s*CTA\s*(?:\([^)]*\))?\s*(?:\|\s*Slide\s*\d+\s*)?\s*:\s*([\s\S]*?)$/i }
+    ];
+
+    const slides = [];
+    for (const p of slidePatterns) {
+        const match = narration.match(p.regex);
+        if (match && match[1]?.trim()) {
+            let content = match[1].trim();
+            const voiceMatch = content.match(/Voice:\s*([\s\S]*?)(?=\n\s*On screen:|$)/i);
+            if (voiceMatch) { content = voiceMatch[1].trim(); }
+            else { content = content.replace(/^On screen:.*$/gim, '').replace(/^Voice:\s*/gim, '').trim(); }
+            slides.push({ label: p.label, icon: p.icon, timing: p.timing, slide: p.slide, content: content.replace(/^\[|\]$/g, '').trim() });
+        }
+    }
+    return slides;
+}
+
+// ─── Render Slide Boxes with Individual Copy Buttons ─────────
+function renderSlideBoxes(slides, idPrefix, accentColor = '#00BFA5') {
+    if (!slides || slides.length === 0) return '<div style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem;">Parsing slides...</div>';
+    return slides.map(s => `
+        <div class="slide-box" style="margin-bottom:0.5rem;border:1px solid ${accentColor}22;border-radius:6px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.3rem 0.6rem;background:${accentColor}0D;">
+                <div style="display:flex;align-items:center;gap:0.35rem;">
+                    <span style="font-size:0.7rem;">${s.icon}</span>
+                    <span style="font-size:0.68rem;font-weight:700;color:${accentColor};">Slide ${s.slide}: ${s.label}</span>
+                    <span style="font-size:0.55rem;padding:0.1rem 0.35rem;background:${accentColor}15;color:${accentColor};border-radius:3px;font-weight:600;">${s.timing}</span>
+                </div>
+                <button class="post-action-btn" onclick="navigator.clipboard.writeText(this.closest('.slide-box').querySelector('.slide-content').textContent.trim());window.showToast('Slide ${s.slide} copied!','success');" style="font-size:0.62rem;color:${accentColor};padding:0.15rem 0.4rem;">📋 Copy</button>
+            </div>
+            <div class="slide-content" style="padding:0.5rem 0.6rem;font-size:0.78rem;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;background:rgba(0,0,0,0.15);cursor:text;user-select:all;">${escapeHtml(s.content)}</div>
+        </div>
+    `).join('');
+}
+
+
 // ─── Toast System ─────────────────────────────────────────────
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -880,10 +951,18 @@ window.appActions = {
         const settings = loadSettings();
         if (!settings.claudeApiKey) { showToast('Claude API key needed.', 'error'); return; }
 
+        // Show loading on the card
+        const card = document.querySelector(`.story-card[data-index="${index}"]`);
+        if (card) {
+            card.querySelector('.story-card-actions').innerHTML = `
+                <span style="color:var(--neuro-teal);font-size:0.75rem;font-weight:600;">⏳ Writing...</span>
+            `;
+        }
+
         setStatus(`Writing post for story ${index + 1}...`, true);
         try {
             const content = await generatePost({
-                topic: story.headline || story.topic,
+                topic: story,
                 pillar: story.pillar,
                 framework: story.framework,
                 cta: story.cta,
@@ -911,23 +990,351 @@ window.appActions = {
             saveSession();
             showToast(`Post ${index + 1} generated!`, 'success');
 
-            // If all posts are generated, show posts view
+            // If all posts are generated, show full posts view
             if (state.posts.filter(Boolean).length === state.stories.length) {
                 renderPosts();
                 showContainer('posts-container');
             } else {
-                // Show inline preview on the story card
-                const card = document.querySelector(`.story-card[data-index="${index}"]`);
+                // Show the generated post inline below the story card
                 if (card) {
                     card.querySelector('.story-card-actions').innerHTML = `
                         <span style="color:var(--green);font-size:0.75rem;font-weight:600;">✅ Generated</span>
+                        <button class="story-generate-btn" onclick="window.appActions.toggleInlinePost(${index})" style="font-size:0.72rem;padding:0.3rem 0.75rem;">👁️ View Post</button>
                     `;
                     card.style.borderColor = 'rgba(46,160,67,0.3)';
+
+                    // Render the inline post preview below the story card
+                    this.renderInlinePost(index, card);
                 }
             }
         } catch (err) {
             showToast(`Error: ${err.message}`, 'error');
+            if (card) {
+                card.querySelector('.story-card-actions').innerHTML = `
+                    <button class="story-generate-btn" onclick="window.appActions.generateStory(${index})">🔄 Retry</button>
+                `;
+            }
         } finally { setStatus('Ready'); }
+    },
+
+    // ─── Render Inline Post Preview Below Story Card ─────────────
+    renderInlinePost(index, card) {
+        const post = state.posts[index];
+        if (!post) return;
+
+        const existingPreview = document.getElementById(`inline-post-${index}`);
+        if (existingPreview) existingPreview.remove();
+
+        const story = state.stories[index] || {};
+        const articleTitle = story.sourceArticle || story.source || '';
+        const articleLink = story.articleUrl || story.sourceUrl || '';
+        const wordCount = (post.content || '').split(/\s+/).filter(Boolean).length;
+        const isConfirmed = state.doneData?.[index]?.confirmed;
+
+        const div = document.createElement('div');
+        div.id = `inline-post-${index}`;
+        div.style.cssText = `margin:0.5rem 0 1rem;border:1px solid ${isConfirmed ? 'rgba(0,191,165,0.3)' : 'rgba(0,191,165,0.2)'};border-radius:8px;background:var(--card);overflow:hidden;${isConfirmed ? 'border-left:3px solid var(--neuro-teal);' : ''}`;
+
+        div.innerHTML = `
+            <!-- Source Article Bar -->
+            ${articleTitle ? `
+            <div style="padding:0.5rem 1rem;background:rgba(0,191,165,0.05);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem;">
+                <span style="font-size:0.72rem;font-weight:600;color:var(--neuro-teal);">📰</span>
+                <span style="font-size:0.72rem;color:var(--text-secondary);flex:1;">${escapeHtml(articleTitle)}</span>
+                ${articleLink ? `<a href="${escapeHtml(articleLink)}" target="_blank" rel="noopener" style="font-size:0.68rem;color:var(--neuro-teal);text-decoration:none;">👁️ Read</a>` : '<span style="font-size:0.68rem;color:var(--text-muted);">No link</span>'}
+            </div>` : ''}
+
+            <!-- Caption Header -->
+            <div style="padding:0.4rem 1rem 0;display:flex;align-items:center;gap:0.5rem;">
+                <span style="font-size:0.72rem;font-weight:700;color:var(--neuro-teal);">📝 LinkedIn Post</span>
+                <span style="font-size:0.68rem;color:var(--text-muted);">(edit before confirming)</span>
+            </div>
+
+            <!-- Read-only Caption -->
+            <div id="inline-post-content-${index}" style="padding:0.5rem 1rem 0.75rem;font-size:0.82rem;line-height:1.6;color:var(--text-primary);white-space:pre-wrap;max-height:300px;overflow-y:auto;">${escapeHtml(post.content || '')}</div>
+
+            <!-- Edit Textarea (hidden until Edit clicked) -->
+            <div id="inline-edit-area-${index}" style="display:none;padding:0.5rem 1rem;">
+                <textarea id="inline-edit-caption-${index}" style="width:100%;min-height:140px;background:var(--bg);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:0.5rem;font-size:0.8rem;line-height:1.5;resize:vertical;font-family:var(--font);">${escapeHtml(post.content || '')}</textarea>
+            </div>
+
+            <!-- Action Bar -->
+            <div id="inline-actions-${index}" style="padding:0.5rem 1rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:0.7rem;color:var(--text-muted);">${wordCount} words</span>
+                <div style="display:flex;gap:0.3rem;align-items:center;">
+                    <span id="inline-status-${index}" style="font-size:0.7rem;font-weight:600;margin-right:0.3rem;"></span>
+                    ${isConfirmed ? `<span style="font-size:0.7rem;color:var(--green);font-weight:600;">✅ Confirmed</span>` : `
+                    <button id="inline-edit-btn-${index}" class="post-action-btn" onclick="window.appActions.inlineEdit(${index})" style="font-size:0.72rem;color:var(--gold);">✏️ Edit</button>
+                    <button id="inline-confirm-btn-${index}" class="post-action-btn" onclick="window.appActions.inlineConfirm(${index})" style="font-size:0.72rem;color:#0A1628;background:var(--neuro-teal);padding:0.3rem 0.7rem;border-radius:4px;font-weight:700;">✅ Confirm → Generate Scripts</button>
+                    `}
+                    <button class="post-action-btn" onclick="window.appActions.copyInlinePost(${index})" style="font-size:0.72rem;">📋 Copy</button>
+                </div>
+            </div>
+
+            <!-- Generated Output Panels (shown after Confirm) -->
+            <div id="inline-output-${index}" style="display:${isConfirmed ? 'block' : 'none'};">
+                <!-- Email HTML -->
+                <div style="border-top:1px solid var(--border);padding:0.75rem 1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span style="font-size:0.78rem;font-weight:700;color:var(--neuro-teal);">📧 Email HTML</span>
+                        <div style="display:flex;gap:0.3rem;">
+                            <button class="post-action-btn" onclick="window.appActions.copyInlineEmail(${index})" style="font-size:0.7rem;">📋 Copy HTML</button>
+                            <button class="post-action-btn" onclick="window.appActions.previewInlineEmail(${index})" style="font-size:0.7rem;">👁️ Preview</button>
+                        </div>
+                    </div>
+                    <pre id="inline-email-code-${index}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0.5rem;font-size:0.7rem;max-height:150px;overflow-y:auto;white-space:pre-wrap;color:var(--text-secondary);">${isConfirmed ? escapeHtml(state.doneData[index]?.emailHTML || 'Loading...') : 'Generating on confirm...'}</pre>
+                </div>
+
+                <!-- Video Script (45-60s) — Per Slide -->
+                <div style="border-top:1px solid var(--border);padding:0.75rem 1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span style="font-size:0.78rem;font-weight:700;color:var(--gold);">🎬 Video Script (45-60s) — Per Slide</span>
+                        <div style="display:flex;gap:0.3rem;">
+                            <button class="post-action-btn" onclick="window.appActions.copyInlineVideo(${index})" style="font-size:0.7rem;">📋 Copy All</button>
+                        </div>
+                    </div>
+                    <div style="font-size:0.58rem;color:var(--text-muted);margin-bottom:0.4rem;">6 slides · Copy each slide for HeyGen narration</div>
+                    <div id="inline-video-slides-${index}">${isConfirmed && state.doneData[index]?.videoSlides ? renderSlideBoxes(state.doneData[index].videoSlides, `ivs-${index}`, '#DAA520') : '<div style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem;">Generating on confirm...</div>'}</div>
+                </div>
+
+                <!-- Shorts Script (30s Playbook) — Per Slide -->
+                <div style="border-top:1px solid var(--border);padding:0.75rem 1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span style="font-size:0.78rem;font-weight:700;color:#FF6B6B;">⚡ Shorts (30s Playbook) — Per Slide</span>
+                        <div style="display:flex;gap:0.3rem;">
+                            <button class="post-action-btn" onclick="window.appActions.copyInlineShorts(${index})" style="font-size:0.7rem;">📋 Copy All</button>
+                        </div>
+                    </div>
+                    <div style="font-size:0.58rem;color:var(--text-muted);margin-bottom:0.4rem;">4 slides · 75-85 words · Loop-engineered</div>
+                    <div id="inline-shorts-slides-${index}">${isConfirmed && state.doneData[index]?.shortsSlides ? renderSlideBoxes(state.doneData[index].shortsSlides, `iss-${index}`, '#FF6B6B') : '<div style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem;">Generating on confirm...</div>'}</div>
+                </div>
+
+                <!-- Quick Launch Links -->
+                <div style="border-top:1px solid var(--border);padding:0.6rem 1rem;">
+                    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+                        <span style="font-size:0.68rem;font-weight:700;color:var(--text-muted);margin-right:0.2rem;">🚀 LAUNCH:</span>
+                        <a href="https://manus.im" target="_blank" rel="noopener" style="font-size:0.68rem;padding:0.2rem 0.5rem;background:rgba(0,191,165,0.1);color:var(--neuro-teal);border:1px solid rgba(0,191,165,0.25);border-radius:4px;text-decoration:none;font-weight:600;" title="Create slide deck in Manus">🎨 Manus</a>
+                        <a href="https://app.heygen.com/avatar/ppt-to-video" target="_blank" rel="noopener" style="font-size:0.68rem;padding:0.2rem 0.5rem;background:rgba(218,165,32,0.1);color:var(--gold);border:1px solid rgba(218,165,32,0.25);border-radius:4px;text-decoration:none;font-weight:600;" title="Upload slides + script to HeyGen">🎬 HeyGen</a>
+                        <a href="https://app.gohighlevel.com/v2/location/vdgR8teGuIgHPMPzbQkK/marketing/social-planner" target="_blank" rel="noopener" style="font-size:0.68rem;padding:0.2rem 0.5rem;background:rgba(46,160,67,0.1);color:var(--green);border:1px solid rgba(46,160,67,0.25);border-radius:4px;text-decoration:none;font-weight:600;" title="Schedule in GHL Social Planner">📱 GHL Planner</a>
+                    </div>
+                </div>
+
+                <!-- Source URL for Manus -->
+                ${articleLink ? `
+                <div style="border-top:1px solid var(--border);padding:0.5rem 1rem;display:flex;align-items:center;gap:0.5rem;">
+                    <span style="font-size:0.68rem;color:var(--neuro-teal);font-weight:600;">🔗 Source for Manus:</span>
+                    <span style="font-size:0.68rem;color:var(--text-secondary);flex:1;word-break:break-all;">${escapeHtml(articleLink)}</span>
+                    <button class="post-action-btn" onclick="navigator.clipboard.writeText('${escapeHtml(articleLink)}');window.showToast('Source URL copied!','success')" style="font-size:0.66rem;">📋</button>
+                </div>` : ''}
+            </div>
+        `;
+
+        card.after(div);
+    },
+
+    toggleInlinePost(index) {
+        const existing = document.getElementById(`inline-post-${index}`);
+        if (existing) { existing.remove(); return; }
+        const card = document.querySelector(`.story-card[data-index="${index}"]`);
+        if (card) this.renderInlinePost(index, card);
+    },
+
+    // Copy the full post content
+    copyInlinePost(index) {
+        const post = state.posts[index];
+        if (post) { copyToClipboard(post.content); showToast('Post copied!', 'success'); }
+    },
+
+    // Edit: show textarea, hide read-only
+    inlineEdit(index) {
+        const readOnly = document.getElementById(`inline-post-content-${index}`);
+        const editArea = document.getElementById(`inline-edit-area-${index}`);
+        const editBtn = document.getElementById(`inline-edit-btn-${index}`);
+        const confirmBtn = document.getElementById(`inline-confirm-btn-${index}`);
+        const status = document.getElementById(`inline-status-${index}`);
+
+        if (readOnly) readOnly.style.display = 'none';
+        if (editArea) editArea.style.display = 'block';
+        if (editBtn) editBtn.style.display = 'none';
+        if (confirmBtn) confirmBtn.style.display = 'inline-flex';
+        if (status) { status.textContent = '✏️ Editing'; status.style.color = 'var(--gold)'; }
+
+        showToast('Edit the post, then click ✅ Confirm', 'info');
+    },
+
+    // Confirm: save edits → generate Email + Video Script + Shorts Script
+    async inlineConfirm(index) {
+        const editCaption = document.getElementById(`inline-edit-caption-${index}`);
+        const readOnly = document.getElementById(`inline-post-content-${index}`);
+        const editArea = document.getElementById(`inline-edit-area-${index}`);
+        const editBtn = document.getElementById(`inline-edit-btn-${index}`);
+        const confirmBtn = document.getElementById(`inline-confirm-btn-${index}`);
+        const status = document.getElementById(`inline-status-${index}`);
+        const outputPanel = document.getElementById(`inline-output-${index}`);
+        const inlineDiv = document.getElementById(`inline-post-${index}`);
+
+        // Save the edited content
+        const captionText = editCaption?.value || state.posts[index]?.content || '';
+        state.posts[index].content = captionText;
+
+        // Update read-only view
+        if (readOnly) { readOnly.textContent = captionText; readOnly.style.display = 'block'; }
+
+        // Hide edit, show generating state
+        if (editArea) editArea.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'none';
+        if (confirmBtn) confirmBtn.style.display = 'none';
+        if (status) { status.textContent = '⏳ Generating...'; status.style.color = 'var(--neuro-teal)'; }
+        if (outputPanel) outputPanel.style.display = 'block';
+        if (inlineDiv) inlineDiv.style.borderLeft = '3px solid var(--neuro-teal)';
+
+        saveSession();
+
+        // Generate Email + Video + Shorts in parallel
+        const post = state.posts[index];
+        const settings = loadSettings();
+        if (!settings.claudeApiKey) { showToast('Claude API key needed.', 'error'); return; }
+
+        const chemData = CHEM_DATA[post.pillar?.id] || { id: 'dopamine', icon: '🧪', name: 'Dopamine' };
+        const story = state.stories[index] || state.topics[index] || {};
+        const topic = post.topic?.headline || post.topic || state.topics[index]?.headline || 'Leadership performance';
+
+        setStatus(`⏳ Generating email + video + shorts for story ${index + 1}...`, true);
+
+        const [emailResult, videoResult, shortsResult] = await Promise.allSettled([
+            // Email HTML
+            (async () => {
+                const emailData = await generateEmail({
+                    postContent: captionText,
+                    topic: post.topic || state.topics[index],
+                    pillar: post.pillar,
+                    cta: post.cta,
+                    apiKey: settings.claudeApiKey
+                });
+                return { emailData, emailHTML: renderEmailHTML(emailData, post.pillar) };
+            })(),
+            // Main video script (45-60s)
+            (async () => {
+                return await generateVideoScript({
+                    topic,
+                    chemicalId: chemData.id,
+                    videoLength: '45-60s',
+                    platform: 'LinkedIn Video',
+                    outputFormat: '9:16',
+                    apiKey: settings.claudeApiKey,
+                    sourceArticle: story.sourceArticle || story.source || '',
+                    articleUrl: story.articleUrl || story.sourceUrl || '',
+                    talkingPoints: story.talkingPoints || [],
+                    emotionalHook: story.emotionalHook || '',
+                    mechanism: story.mechanism || '',
+                    businessRelevance: story.businessRelevance || '',
+                    postContent: captionText
+                });
+            })(),
+            // Shorts script (30s — Playbook-compliant)
+            (async () => {
+                return await generateShortsScript({
+                    topic,
+                    chemicalId: chemData.id,
+                    sourceArticle: story.sourceArticle || story.source || '',
+                    articleUrl: story.articleUrl || story.sourceUrl || '',
+                    mechanism: story.mechanism || '',
+                    businessRelevance: story.businessRelevance || '',
+                    killerDataPoint: story.killerDataPoint || '',
+                    talkingPoints: story.talkingPoints || [],
+                    postContent: captionText,
+                    apiKey: settings.claudeApiKey
+                });
+            })()
+        ]);
+
+        // Handle results
+        if (!state.doneData) state.doneData = {};
+        if (!state.doneData[index]) state.doneData[index] = {};
+        state.doneData[index].confirmed = true;
+
+        // Email
+        const emailCodeEl = document.getElementById(`inline-email-code-${index}`);
+        if (emailResult.status === 'fulfilled') {
+            const { emailData, emailHTML } = emailResult.value;
+            state.doneData[index].emailHTML = emailHTML;
+            state.doneData[index].emailData = emailData;
+            if (emailCodeEl) emailCodeEl.textContent = emailHTML;
+        } else {
+            if (emailCodeEl) emailCodeEl.textContent = `Error: ${emailResult.reason?.message || 'Failed'}`;
+        }
+
+        // Video (45-60s) — parse into slides
+        const videoSlidesEl = document.getElementById(`inline-video-slides-${index}`);
+        if (videoResult.status === 'fulfilled') {
+            const fullScript = videoResult.value;
+            const scriptMatch = fullScript.match(/=== VIDEO SCRIPT ===\s*([\s\S]*?)(?:=== SLIDE DECK|$)/i);
+            const rawNarration = (scriptMatch?.[1] || fullScript).trim();
+            const cleanTXT = rawNarration
+                .replace(/^(?:HOOK|SCENARIO|THE SCIENCE|THE COST|THE BRIDGE|CTA)\s*(?:\([^)]*\))?\s*:\s*/gim, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+
+            state.doneData[index].videoScript = fullScript;
+            state.doneData[index].cleanVideoTXT = cleanTXT;
+
+            const videoSlides = parseVideoSlides(fullScript);
+            state.doneData[index].videoSlides = videoSlides;
+            if (videoSlidesEl) videoSlidesEl.innerHTML = renderSlideBoxes(videoSlides, `ivs-${index}`, '#DAA520');
+        } else {
+            if (videoSlidesEl) videoSlidesEl.innerHTML = `<div style="color:#FF6B6B;font-size:0.75rem;">Error: ${videoResult.reason?.message || 'Failed'}</div>`;
+        }
+
+        // Shorts (30s) — parse into slides
+        const shortsSlidesEl = document.getElementById(`inline-shorts-slides-${index}`);
+        if (shortsResult.status === 'fulfilled') {
+            const fullShorts = shortsResult.value;
+            const shortsScriptMatch = fullShorts.match(/=== SHORTS SCRIPT[^=]*===\s*([\s\S]*?)(?:=== SHORTS SLIDE|$)/i);
+            const rawShorts = (shortsScriptMatch?.[1] || fullShorts).trim();
+            const cleanShorts = rawShorts
+                .replace(/^(?:HOOK|THE INSIGHT|THE PROOF|CTA)\s*(?:\([^)]*\))?\s*(?:\|\s*Slide\s*\d+\s*)?\s*:\s*/gim, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+
+            state.doneData[index].shortsScript = fullShorts;
+            state.doneData[index].shortsTXT = cleanShorts;
+
+            const shortsSlides = parseShortsSlides(fullShorts);
+            state.doneData[index].shortsSlides = shortsSlides;
+            if (shortsSlidesEl) shortsSlidesEl.innerHTML = renderSlideBoxes(shortsSlides, `iss-${index}`, '#FF6B6B');
+        } else {
+            if (shortsSlidesEl) shortsSlidesEl.innerHTML = `<div style="color:#FF6B6B;font-size:0.75rem;">Error: ${shortsResult.reason?.message || 'Failed'}</div>`;
+        }
+
+        saveSession();
+        if (status) { status.textContent = '✅ Confirmed'; status.style.color = 'var(--green)'; }
+        setStatus('Ready');
+        showToast(`✅ Story ${index + 1} confirmed — email + video + shorts ready!`, 'success');
+    },
+
+    // Copy handlers for inline post
+    copyInlineEmail(index) {
+        const html = state.doneData?.[index]?.emailHTML;
+        if (html) { copyToClipboard(html); showToast('Email HTML copied — paste into GHL!', 'success'); }
+        else { showToast('Confirm the post first.', 'info'); }
+    },
+
+    previewInlineEmail(index) {
+        const html = state.doneData?.[index]?.emailHTML;
+        if (html) { const w = window.open('', '_blank', 'width=640,height=800'); w.document.write(html); w.document.close(); }
+        else { showToast('Confirm the post first.', 'info'); }
+    },
+
+    copyInlineVideo(index) {
+        const txt = state.doneData?.[index]?.cleanVideoTXT;
+        if (txt) { copyToClipboard(txt); showToast('Video script copied — send to HeyGen!', 'success'); }
+        else { showToast('Confirm the post first.', 'info'); }
+    },
+
+    copyInlineShorts(index) {
+        const txt = state.doneData?.[index]?.shortsTXT;
+        if (txt) { copyToClipboard(txt); showToast('Shorts script copied — send to HeyGen!', 'success'); }
+        else { showToast('Confirm the post first.', 'info'); }
     },
 
     async generateVideoForPost(index) {
