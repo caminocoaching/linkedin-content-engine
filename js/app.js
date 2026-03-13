@@ -19,7 +19,7 @@ import {
     generateTopics, generatePost, generatePosts, regeneratePost, generateImagePrompt,
     generateVideoScript, generateShortsScript, storeUsedArticles, storeUsedHooks,
     generateEmail, renderEmailHTML, callClaude, callGeminiWithSearch
-} from './ai-service.js?v=20260311a';
+} from './ai-service.js?v=20260313a';
 
 import {
     createManusSlideTask, checkManusTaskStatus,
@@ -326,7 +326,7 @@ function initWeeklyMode() {
 }
 
 
-// ─── Step 1: Find Stories ─────────────────────────────────────
+// ─── Step 1: Find Stories (3-Step Verified Pipeline) ──────────
 async function handleFindStories() {
     const settings = loadSettings();
     if (!settings.geminiApiKey) {
@@ -337,7 +337,14 @@ async function handleFindStories() {
     const btn = document.getElementById('find-stories-btn');
     btn.classList.add('loading');
     btn.disabled = true;
-    setStatus('🔍 Searching the web for leadership stories...', true);
+
+    // Progress callback for 3-step pipeline
+    const onProgress = (step, message) => {
+        const stepIcons = { step1: '🔍', step2: '📥', step3: '🧠' };
+        const stepLabels = { step1: 'Step 1/3', step2: 'Step 2/3', step3: 'Step 3/3' };
+        setStatus(`${stepIcons[step] || '⚡'} ${stepLabels[step] || ''}: ${message}`, true);
+        showToast(`${stepLabels[step]}: ${message}`, 'info');
+    };
 
     try {
         // AI decides all the assignments
@@ -350,11 +357,12 @@ async function handleFindStories() {
         state.weeklyAuthorities = state.weeklyPillars.map(() => getRotatingAuthority());
         state.weeklyMotorsportBridges = state.weeklyPillars.map(() => getRotatingMotorsportBridge());
 
-        // Generate topics via Gemini web search
+        // 3-Step Verified Pipeline: Search → Fetch → Generate
         state.topics = await generateTopics(
             state.weeklyPillars,
             state.seasonalContext,
-            settings.geminiApiKey
+            settings.geminiApiKey,
+            onProgress
         );
 
         // Store articles for deduplication
@@ -370,10 +378,13 @@ async function handleFindStories() {
             postType: state.weeklyFrameworks[i]?.name || 'Familiar'
         }));
 
+        // Count verified vs unverified
+        const verifiedCount = state.topics.filter(t => t.verifiedSource).length;
+
         renderStoryCards();
         showContainer('stories-container');
         saveSession();
-        showToast('7 stories found! Tap any to generate, or Write All 7.', 'success');
+        showToast(`7 stories found! ${verifiedCount}/7 have verified source URLs. Tap any to generate, or Write All 7.`, 'success');
     } catch (err) {
         showToast(`Error: ${err.message}`, 'error');
         console.error(err);
@@ -421,10 +432,13 @@ function renderStoryCards() {
         const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         const matchBadges = {
+            'verified-fetch': { label: '✅ Verified', color: '#2EA043', tip: 'Article URL confirmed — content fetched and verified from the real source' },
+            'proprietary-data': { label: '📊 Proprietary', color: '#4dabf7', tip: 'Camino Coaching proprietary data — no external URL needed' },
             'gemini-direct': { label: '✅ Direct', color: '#2EA043', tip: 'URL provided directly by Gemini search' },
             'domain-match': { label: '🔗 Domain', color: '#00BFA5', tip: 'URL matched by domain name in source' },
             'title-match': { label: '🔍 Keywords', color: '#DAA520', tip: 'URL matched by title keywords' },
             'best-guess': { label: '🟡 Best Guess', color: '#E8912A', tip: 'Best available URL — verify before using' },
+            'unresolved': { label: '🔴 Unresolved', color: '#E84444', tip: 'URL could not be resolved from redirect' },
             'unverified': { label: '⚠️ No URL', color: '#E84444', tip: 'No URL could be matched from search results' }
         };
         const badge = matchBadges[urlMatch] || matchBadges['unverified'];

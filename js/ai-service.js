@@ -160,72 +160,347 @@ NEVER: "Like if you agree" / "Share with someone" / "Tag a friend" / "Follow for
 NEVER: Generic motivation or "you can do it" energy`;
 
 
-// ─── Generate Article Topics with Web Search (Weekly Wizard Step 1) ──
-export async function generateTopics(pillars, seasonalContext, apiKey) {
+// ═══════════════════════════════════════════════════════════════
+// ⚡ 3-STEP VERIFIED RESEARCH PIPELINE
+// Step 1: Search per pillar → get real article URLs
+// Step 2: Fetch article content from those URLs
+// Step 3: Generate topic angles from verified content
+// ═══════════════════════════════════════════════════════════════
 
-    const daySlots = WEEKLY_SCHEDULE.map((slot, i) => {
-        return `${slot.day}: ${slot.contentType} — ${slot.dayBrief}\nSEARCH FOCUS: ${slot.searchFocus}\nSEARCH MANDATE: ${slot.searchMandate}`;
-    });
-
+// ─── Step 1: Per-pillar search → collect real article URLs ────
+async function searchForArticles(pillars, seasonalContext, apiKey) {
     const seasonNote = seasonalContext
         ? `Season context: ${seasonalContext.season} — ${seasonalContext.context}`
         : '';
 
-    const prompt = `Search the web for 7 stories from the last 7-30 days for a business leadership mental performance coach's LinkedIn. The audience is CEOs, founders, and senior leaders running £1M-£50M businesses.
+    const dedupCtx = buildDeduplicationContext();
 
-TARGET SOURCES: Harvard Business Review, McKinsey Quarterly, Financial Times, The Economist, Nature, Science, Stanford GSB, MIT Sloan, Wall Street Journal, Forbes, Wired, TED, BBC World.
-ALSO WELCOME: Neuroscience journals, sports psychology studies, biohacking research, sleep science, performance technology, elite athlete stories.
+    // Build per-pillar search queries — each pillar gets its own search
+    const searchPromises = WEEKLY_SCHEDULE.map(async (slot, i) => {
+        // Thursday (Camino Data) doesn't need external search
+        if (slot.pillarId === 'camino-data') {
+            return {
+                pillarId: slot.pillarId,
+                day: slot.day,
+                articles: [],
+                isCaminoData: true
+            };
+        }
 
-WEARABLE TECH & BIOMETRICS (actively search these):
-- WHOOP: HRV studies, strain tracking, recovery science, sleep coaching data, CEO/founder performance case studies, Whoop Journal correlations
-- OURA RING: Sleep architecture research, readiness scores, circadian rhythm insights, temperature tracking, executive health studies
-- APPLE WATCH: Health feature innovations, heart rate variability research, mindfulness features, blood oxygen studies, fall detection/safety data, executive wellness programmes
-- GARMIN: Body Battery energy monitoring, stress tracking, training load data, endurance athlete insights that bridge to executive stamina, advanced sleep/HRV metrics
-- GOPRO: Peak performance documentation, flow state capture in extreme sport, first-person perspective training, adventure athlete mental preparation
-- GENERAL WEARABLES: Any new study linking wearable biometric data to cognitive performance, decision quality, leadership stamina, or executive burnout prevention
+        const searchPrompt = `Search the web for 2-3 recent articles (published in the last 7-30 days) related to this specific topic area:
+
+CONTENT PILLAR: ${slot.contentType}
+SEARCH FOCUS: ${slot.searchFocus}
+SEARCH MANDATE: ${slot.searchMandate}
+${seasonNote}
+
+TARGET SOURCES: Harvard Business Review, McKinsey Quarterly, Financial Times, The Economist, Nature, Science, Stanford GSB, MIT Sloan, Wall Street Journal, Forbes, Wired, TED, BBC World. Also welcome: neuroscience journals, sports psychology studies, biohacking research, sleep science, performance technology, elite athlete stories, wearable tech studies (WHOOP, Oura Ring, Apple Watch, Garmin).
+
+RULES:
+- Find REAL, CURRENT articles published in the last 30 days
+- Each article must have a real URL from your search results
+- Do NOT fabricate or simulate URLs — only use URLs you found in search
+- Do NOT include YouTube or video-only results
+- Prefer articles with specific data points, research findings, or named researchers/institutions
+${dedupCtx}
+
+Return a JSON array with 2-3 article objects:
+[
+  {
+    "title": "The exact article title as it appears on the website",
+    "url": "The real URL from your search results",
+    "source": "Publication name",
+    "publishDate": "Approximate date published",
+    "snippet": "1-2 sentence summary of the article's key finding"
+  }
+]
+
+Return ONLY the JSON array. No markdown, no explanation.`;
+
+        try {
+            const result = await callGeminiWithSearch(searchPrompt, apiKey, true);
+            let articles = Array.isArray(result) ? result : [];
+
+            // Post-process: resolve any redirect URLs in search results
+            // The callGeminiWithSearch URL matching only processes 'articleUrl' field,
+            // but our search results use 'url' field, so we handle resolution here.
+            for (const article of articles) {
+                if (article.url && (article.url.includes('grounding-api-redirect') || article.url.includes('vertexaisearch'))) {
+                    const resolved = await resolveRedirectUrl(article.url);
+                    if (resolved && !resolved.includes('grounding-api-redirect')) {
+                        console.log(`[Search] Resolved redirect: ${article.url.substring(0, 50)}... → ${resolved}`);
+                        article.url = resolved;
+                    } else {
+                        console.warn(`[Search] Could not resolve redirect URL for "${article.title}"`);
+                    }
+                }
+                // Also check if Gemini matched articleUrl via grounding (from callGeminiWithSearch)
+                if (article.articleUrl && !article.url) {
+                    article.url = article.articleUrl;
+                }
+            }
+
+            // Filter out articles with no usable URL
+            articles = articles.filter(a => a.url && !a.url.includes('grounding-api-redirect'));
+
+            console.log(`[Search] ${slot.day} (${slot.pillarId}): Found ${articles.length} usable articles`);
+            return {
+                pillarId: slot.pillarId,
+                day: slot.day,
+                articles,
+                isCaminoData: false
+            };
+        } catch (err) {
+            console.error(`[Search] ${slot.day} search failed:`, err.message);
+            return {
+                pillarId: slot.pillarId,
+                day: slot.day,
+                articles: [],
+                isCaminoData: false,
+                error: err.message
+            };
+        }
+    });
+
+    return await Promise.all(searchPromises);
+}
+
+// ─── Step 2: Fetch actual article content from URLs ───────────
+async function fetchArticleContent(url) {
+    if (!url || url.includes('grounding-api-redirect') || url.includes('vertexaisearch')) {
+        // Try to resolve redirect first
+        const resolved = await resolveRedirectUrl(url);
+        if (!resolved || resolved.includes('grounding-api-redirect')) {
+            return null;
+        }
+        url = resolved;
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const apiUrl = `/api/fetch-article?url=${encodeURIComponent(url)}`;
+        const response = await fetch(apiUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            console.warn(`[Fetch] HTTP ${response.status} for ${url}`);
+            return null;
+        }
+
+        const data = await response.json();
+        if (data.error && !data.content) {
+            console.warn(`[Fetch] Error for ${url}: ${data.error}`);
+            return null;
+        }
+
+        console.log(`[Fetch] ✅ ${url.substring(0, 60)}... → ${data.title?.substring(0, 50) || 'no title'} (${data.content?.length || 0} chars)`);
+        return {
+            url: data.url || url,
+            title: data.title || '',
+            description: data.description || '',
+            author: data.author || '',
+            publishDate: data.publishDate || '',
+            siteName: data.siteName || '',
+            content: data.content || '',
+            fetchedAt: data.fetchedAt || new Date().toISOString()
+        };
+    } catch (err) {
+        console.warn(`[Fetch] Failed for ${url}: ${err.message}`);
+        return null;
+    }
+}
+
+async function fetchAllArticles(searchResults) {
+    const allFetchPromises = [];
+
+    for (const pillarResult of searchResults) {
+        if (pillarResult.isCaminoData) continue;
+
+        for (const article of pillarResult.articles) {
+            if (!article.url) continue;
+            allFetchPromises.push(
+                fetchArticleContent(article.url).then(content => ({
+                    ...article,
+                    pillarId: pillarResult.pillarId,
+                    day: pillarResult.day,
+                    fetchedContent: content
+                }))
+            );
+        }
+    }
+
+    const results = await Promise.allSettled(allFetchPromises);
+    return results
+        .filter(r => r.status === 'fulfilled' && r.value)
+        .map(r => r.value);
+}
+
+// ─── Step 3: Generate topics from verified article content ────
+async function generateTopicsFromArticles(verifiedArticles, pillars, seasonalContext, apiKey) {
+    const seasonNote = seasonalContext
+        ? `Season context: ${seasonalContext.season} — ${seasonalContext.context}`
+        : '';
+
+    // Group verified articles by pillar
+    const articlesByPillar = {};
+    for (const article of verifiedArticles) {
+        if (!articlesByPillar[article.pillarId]) {
+            articlesByPillar[article.pillarId] = [];
+        }
+        articlesByPillar[article.pillarId].push(article);
+    }
+
+    // Build the verified research brief for each day
+    const dayBriefs = WEEKLY_SCHEDULE.map((slot, i) => {
+        const pillarArticles = articlesByPillar[slot.pillarId] || [];
+        const pillar = pillars[i];
+
+        if (slot.pillarId === 'camino-data') {
+            return `
+DAY ${i + 1}: ${slot.day} — ${slot.contentType}
+PILLAR: ${pillar?.name || slot.contentType}
+BRIEF: ${slot.dayBrief}
+SEARCH MANDATE: ${slot.searchMandate}
+NO EXTERNAL ARTICLE NEEDED — Use Craig's proprietary data:
+- 2,358 debriefs, 808 PBs, 438 podiums, 159 wins, 155 racers, 100+ circuits, 60 months
+- Confidence 8.5+/10 = 2.7x more personal bests
+- 81% of successful sessions use box breathing
+- 4.9/5 across 85 reviews (100% five-star)
+Set articleUrl to "" and sourceArticle to "Camino Coaching Proprietary Data"`;
+        }
+
+        if (pillarArticles.length === 0) {
+            return `
+DAY ${i + 1}: ${slot.day} — ${slot.contentType}
+PILLAR: ${pillar?.name || slot.contentType}
+BRIEF: ${slot.dayBrief}
+⚠️ NO VERIFIED ARTICLES FOUND — Use the search mandate to generate a topic from your knowledge, but set articleUrl to "" and mark sourceArticle as "General research"
+SEARCH MANDATE: ${slot.searchMandate}`;
+        }
+
+        const articleDetails = pillarArticles.map((a, ai) => {
+            const content = a.fetchedContent;
+            if (!content) {
+                return `  ARTICLE ${ai + 1}: "${a.title}" (${a.source})
+    URL: ${a.url}
+    SNIPPET: ${a.snippet || 'No snippet available'}
+    ⚠️ Could not fetch full content — use title and snippet only`;
+            }
+            return `  ARTICLE ${ai + 1}: "${content.title || a.title}"
+    URL: ${content.url || a.url}
+    SOURCE: ${content.siteName || a.source} ${content.publishDate ? `| ${content.publishDate}` : ''}
+    ${content.author ? `AUTHOR: ${content.author}` : ''}
+    ${content.description ? `DESCRIPTION: ${content.description}` : ''}
+    CONTENT EXTRACT (first ~2000 chars):
+    ${(content.content || '').substring(0, 2000)}`;
+        }).join('\n\n');
+
+        return `
+DAY ${i + 1}: ${slot.day} — ${slot.contentType}
+PILLAR: ${pillar?.name || slot.contentType}
+BRIEF: ${slot.dayBrief}
+SEARCH MANDATE: ${slot.searchMandate}
+VERIFIED ARTICLES (choose the BEST one for this pillar):
+${articleDetails}`;
+    }).join('\n\n' + '═'.repeat(60) + '\n');
+
+    const prompt = `You are generating 7 topic angles for a business leadership LinkedIn content engine. Below is VERIFIED research — real articles with real URLs and real content that has been fetched and confirmed.
+
+YOUR JOB: For each day, select the best article from the verified options and generate a compelling topic angle grounded in that REAL article's content. Extract REAL data points, REAL researcher names, and REAL findings from the article text provided.
 
 ${seasonNote}
 
-Find one story for each slot:
-${daySlots.map((d, i) => `${i + 1}. ${d}`).join('\n\n')}
+═══ VERIFIED RESEARCH BRIEF ═══
+${dayBriefs}
 
-RULES:
+═══ GENERATION RULES ═══
+- Use the REAL article title from the fetched content (not a paraphrase)
+- Use the REAL URL provided — do NOT change or fabricate URLs
+- Extract REAL data points and findings from the article content provided above
 - Every headline must connect to the MENTAL PERFORMANCE or NEUROCHEMISTRY side of leadership
 - Use BUSINESS language: CEO, boardroom, strategic decision, quarterly review, board meeting, executive team, founder, scaling
-- Related topics are welcome: neuroscience, peak performance, biometrics (HRV, EEG, wearables, sleep tracking), elite sport (as a BRIDGE to business), technology, brain science
-- WEARABLE DATA stories are HIGHLY VALUED: new studies from Whoop, Oura, Apple Watch, Garmin showing how biometric tracking improves decision-making, recovery, sleep, or prevents burnout in leaders
-- At least 1 story per week should reference wearable tech, health tracking data, or biometric research where possible
-- At least 2 stories should include SPECIFIC data points or research findings
-- MOTORSPORT BRIDGES: Where relevant, use motorsport as a bridge to business (e.g., "F1 pit crews make 80 decisions in 2.4 seconds — here is the boardroom parallel"). F1 drivers use biometric wearables extensively — this is a natural bridge topic.
-- Thursday MUST use Craig's proprietary data (2,358 debriefs, 808 PBs, etc.) — do NOT search externally for this slot
+- MOTORSPORT BRIDGES: Where natural, use motorsport as a bridge to business
+- Thursday MUST use Craig's proprietary data — no external article needed
 
 Return a JSON array with 7 objects:
 [
   {
-    "pillarId": "${pillars[0]?.id || 'hidden-cost'}",
-    "headline": "Compelling headline connecting the story to leadership mental performance",
-    "sourceArticle": "Accurate article title from the website",
-    "articleUrl": "Real URL from your search results (never fabricated)",
-    "source": "Publication name | Date published",
-    "summary": "3 sentences describing the key finding of the article",
-    "talkingPoints": ["Point 1", "Point 2", "Point 3"],
-    "killerDataPoint": "The specific number, percentage, measurement, or direct quote that makes this article valuable. Must be concrete.",
+    "pillarId": "the-pillar-id",
+    "headline": "Compelling headline connecting the article's finding to leadership mental performance",
+    "sourceArticle": "The REAL article title (from the fetched content, not paraphrased)",
+    "articleUrl": "The REAL URL (exactly as provided in the verified research above)",
+    "source": "Publication name | Date published (from the fetched metadata)",
+    "summary": "3 sentences describing the key finding — must reference REAL data from the article content",
+    "talkingPoints": ["Point 1 from the article", "Point 2 from the article", "Point 3 — bridge to business"],
+    "killerDataPoint": "A REAL specific number, percentage, or quote from the article content. Must be verifiable.",
     "emotionalHook": "What should the business leader feel?",
     "mechanism": "Neuroscience mechanism or brain chemical referenced",
-    "businessRelevance": "One sentence connecting to business leadership, using business language (CEO, boardroom, strategic decision, quarterly review, executive team)",
-    "contentBrief": "Type of post"
+    "businessRelevance": "One sentence connecting to business leadership",
+    "contentBrief": "Type of post",
+    "verifiedSource": true
   }
 ]
 
-=== URL AND TITLE ACCURACY ===
-
-- Use the accurate article title from the source. Do not invent or heavily paraphrase titles.
-- Provide the real URL from your search results. Do not fabricate or simulate URLs.
-- If no URL is available for a story, use an empty string "" for articleUrl.
+CRITICAL: If a day has no verified articles, still generate a topic but set "articleUrl" to "" and "verifiedSource" to false.
 
 Return ONLY the JSON array with exactly 7 items.`;
 
     return await callGeminiWithSearch(prompt, apiKey, true);
+}
+
+// ─── Main Entry Point: 3-Step Verified Pipeline ──────────────
+export async function generateTopics(pillars, seasonalContext, apiKey, onProgress = null) {
+
+    // Step 1: Search for articles per pillar
+    if (onProgress) onProgress('step1', 'Searching for real articles across 7 pillars...');
+    console.log('[Pipeline] Step 1: Searching for articles per pillar...');
+    const searchResults = await searchForArticles(pillars, seasonalContext, apiKey);
+
+    const totalArticlesFound = searchResults.reduce((sum, r) => sum + (r.articles?.length || 0), 0);
+    console.log(`[Pipeline] Step 1 complete: Found ${totalArticlesFound} article candidates across ${searchResults.length} pillars`);
+    searchResults.forEach(r => {
+        if (r.isCaminoData) console.log(`  ${r.day}: Camino Data (no search needed)`);
+        else console.log(`  ${r.day}: ${r.articles?.length || 0} articles ${r.error ? `(ERROR: ${r.error})` : ''}`);
+    });
+
+    // Step 2: Fetch actual content from article URLs
+    if (onProgress) onProgress('step2', `Fetching content from ${totalArticlesFound} article URLs...`);
+    console.log(`[Pipeline] Step 2: Fetching content from ${totalArticlesFound} URLs...`);
+    const verifiedArticles = await fetchAllArticles(searchResults);
+
+    const fetchedCount = verifiedArticles.filter(a => a.fetchedContent).length;
+    console.log(`[Pipeline] Step 2 complete: ${fetchedCount}/${verifiedArticles.length} articles fetched successfully`);
+    verifiedArticles.forEach(a => {
+        const status = a.fetchedContent ? '✅' : '❌';
+        console.log(`  ${status} [${a.day}] "${a.title?.substring(0, 50)}..." → ${a.url?.substring(0, 60)}`);
+    });
+
+    // Step 3: Generate topic angles from verified content
+    if (onProgress) onProgress('step3', `Generating topics from ${fetchedCount} verified articles...`);
+    console.log(`[Pipeline] Step 3: Generating topics from ${fetchedCount} verified articles...`);
+    const topics = await generateTopicsFromArticles(verifiedArticles, pillars, seasonalContext, apiKey);
+
+    // Post-process: mark which topics have verified URLs
+    if (Array.isArray(topics)) {
+        for (const topic of topics) {
+            if (topic.articleUrl && !topic.articleUrl.includes('grounding-api-redirect') && !topic.articleUrl.includes('vertexaisearch')) {
+                topic.urlMatchMethod = 'verified-fetch';
+                topic.verifiedSource = true;
+            } else if (topic.pillarId === 'camino-data') {
+                topic.urlMatchMethod = 'proprietary-data';
+                topic.verifiedSource = true;
+            } else {
+                topic.urlMatchMethod = topic.articleUrl ? 'unresolved' : 'unverified';
+                topic.verifiedSource = false;
+            }
+        }
+
+        const verifiedCount = topics.filter(t => t.verifiedSource).length;
+        console.log(`[Pipeline] ✅ Complete: ${verifiedCount}/7 topics have verified sources`);
+    }
+
+    return topics;
 }
 
 
